@@ -1019,6 +1019,14 @@ export async function startProviderOAuth(provider: OAuthProvider, ctx: Onboardin
         return
       }
 
+      // Automatically wire the Clerk token as the UNITALK_API_KEY for llmgateway.unitalk.ai.
+      // The user never sees or configures an API key — the token IS the key.
+      try {
+        await setEnvVar('UNITALK_API_KEY', token, ctx.scope, { providerSetup: true })
+      } catch {
+        // Non-fatal: the gateway call won't auth but the token is still stored.
+      }
+
       try {
         await submitClerkToken(token, ctx.scope)
       } catch (submitError) {

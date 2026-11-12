@@ -178,3 +178,14 @@ export function startListeningForCallback(): () => void {
     }
   }) ?? (() => undefined)
 }
+
+/**
+ * Return the Clerk session token as the Unitalk AI Gateway API key.
+ * This wires Clerk SSO directly to the LiteLLM gateway — the user
+ * never sees or configures an API key. The token is submitted as
+ * `UNITALK_API_KEY` env var to the backend and passed as
+ * `Authorization: Bearer <token>` to llmgateway.unitalk.ai.
+ */
+export function getGatewayApiKey(): null | string {
+  return getClerkToken()
+}
