@@ -66,7 +66,13 @@ export async function runPrimaryBackendStartup<Backend, RuntimeBackend, Remote, 
   const savedRemote = await step(resolveRemote)
 
   if (savedRemote) {
-    return { kind: 'remote', connection: await step(() => connectRemote(savedRemote)) }
+    try {
+      return { kind: 'remote', connection: await step(() => connectRemote(savedRemote)) }
+    } catch {
+      // Remote saved but unreachable (e.g. decommissioned instance).
+      // Fall through to show the first-run setup choice instead of blocking.
+      void savedRemote
+    }
   }
 
   await step(waitForLocalStart)
