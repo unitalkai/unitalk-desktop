@@ -84,7 +84,12 @@ export async function runPrimaryBackendStartup<Backend, RuntimeBackend, Remote, 
     const registryPrimary = await step(selectRegistryPrimary)
 
     if (registryPrimary) {
-      return { kind: 'remote', connection: await step(() => connectRemote(registryPrimary)) }
+      try {
+        return { kind: 'remote', connection: await step(() => connectRemote(registryPrimary)) }
+      } catch {
+        // Registry primary unreachable — fall through to setup choice
+        void registryPrimary
+      }
     }
   }
 
