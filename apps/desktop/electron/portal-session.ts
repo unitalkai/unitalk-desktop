@@ -259,25 +259,15 @@ export function createPortalSession({
   // must not close the window before the portal can replace it.
   async function openPortalLoginWindow(): Promise<void> {
     if (!isReady()) {
-      throw new Error('Desktop is not ready to start a Hermes Cloud sign-in.')
+      throw new Error('Desktop is not ready to start a Unitalk Cloud sign-in.')
     }
 
-    const sess = getOauthSession()
+    const portalBaseUrl = resolvePortalBaseUrl()
+    const signInUrl = `${portalBaseUrl}/home/inscription`
 
-    if (!sess) {
-      throw new Error('OAuth session partition is unavailable.')
-    }
-
-    const outcome = await driveCookieWindow(sess, await readAccessCookies(), {
-      kind: 'portal',
-      title: 'Sign in to Hermes Cloud',
-      show: true,
-      pollMs: 750
-    })
-
-    if (outcome !== 'landed') {
-      throw outcome instanceof Error ? outcome : new Error('Sign-in window closed before authentication completed.')
-    }
+    // Open the system browser for Clerk SSO instead of an Electron window
+    const { shell } = await import('electron')
+    await shell.openExternal(signInUrl)
   }
 
   return { hasLivePortalSession, hasPortalAccessToken, renewPortalAccessSilently, openPortalLoginWindow }
