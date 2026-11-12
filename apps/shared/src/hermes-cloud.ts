@@ -5,7 +5,7 @@
  * `hermes update` against one.
  */
 
-const HERMES_CLOUD_HOST_SUFFIXES = ['.agents.nousresearch.com', '.agents.staging-nousresearch.com']
+const HERMES_CLOUD_HOST_SUFFIXES = ['.agent.unitalk.ai', '.agents.staging-nousresearch.com']
 
 /** Why an update target is skipped: the platform updates it. */
 export const HERMES_CLOUD_MANAGED = 'cloud-managed'
