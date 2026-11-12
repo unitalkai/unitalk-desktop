@@ -1763,7 +1763,7 @@ jobs:
     name: Build + publish the termux .deb (aarch64)
     needs: [validate]
     if: inputs.channel == '' && inputs.disposable_channel == '' && needs.validate.outputs.termux == 'true' && (inputs.upload_release == true || inputs.release-phase == 'candidate' || inputs.build_commit != '')
-    runs-on: blacksmith-4vcpu-ubuntu-2404-arm
+    runs-on: [self-hosted, Linux, ARM64, unitalk-azure-linux-arm]
     environment: release-signing
     timeout-minutes: 90
     env:
@@ -1783,7 +1783,7 @@ jobs:
       CLOUDFLARE_R2_PUBLIC_URL: ${{ vars.CLOUDFLARE_R2_PUBLIC_URL }}
     steps:
       # Use the admitted commit, not a tag that can move after validation.
-      - uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a  # v1
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
         with:
           ref: ${{ needs.validate.outputs.sha }}
           # Commit builds only rev-parse HEAD; tag builds verify ancestry.

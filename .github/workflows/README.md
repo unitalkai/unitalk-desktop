@@ -142,19 +142,19 @@ events made with the default `GITHUB_TOKEN`. `workflow_dispatch` and
 
 ### Runners
 
-Linux x64 jobs use the ephemeral self-hosted `unitalk-azure` runner. Its image
-must provide Ubuntu 24.04-compatible system packages, passwordless sudo, Git,
-Python, Docker and Azure CLI where needed, and the other tools normally present
-on GitHub's Ubuntu image. The Linux test suite uses 32 workers; smaller machines
-may need different timeouts or worker settings. Provision replacement runners
-after each job, with enough capacity for parallel matrices. Isolate each runner
-and its network and credentials from other jobs: PR jobs execute untrusted code.
-In particular, do not expose a privileged Azure managed identity to PR jobs.
+Linux x64 jobs use `unitalk-azure`; native Linux ARM64 image and Termux builds
+use `unitalk-azure-linux-arm`. Both self-hosted runners require Ubuntu
+24.04-compatible system packages, Git, Python, Docker, GitHub CLI and Azure CLI
+where needed. The Linux test suite uses 32 workers; smaller machines may need
+different timeouts or worker settings. Provision enough capacity for parallel
+matrices.
 
-Native ARM Linux, Windows and macOS jobs retain their existing hosted runners.
-Docker manifest publication stays on GitHub-hosted `ubuntu-latest` because of
-previous `imagetools` failures on other runners. Docker and sandbox image builds
-use `unitalk-azure` for amd64 and `ubuntu-24.04-arm` for native arm64.
+The current runners are persistent, not ephemeral. PR jobs execute untrusted
+code, so they must be isolated from privileged jobs, networks and credentials;
+do not expose a privileged Azure managed identity to PR jobs. Windows and macOS
+jobs retain their existing hosted runners. Docker manifest publication stays on
+GitHub-hosted `ubuntu-latest` because of previous `imagetools` failures on
+other runners.
 
 ---
 
