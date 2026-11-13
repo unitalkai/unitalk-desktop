@@ -26,7 +26,7 @@ export const frModelSettings: TranslationOverride<ModelSettingsTranslations> = {
   moaAddReference: 'Ajouter un modèle de référence',
   loading: 'Chargement de la configuration du modèle...',
   appliesDesc:
-    "S'applique aux nouvelles sessions. Utilisez le sélecteur de modèle dans le compositeur pour changer à chaud la conversation active.",
+    "Modèle qui s'applique par défaut pour les nouvelles sessions. Vous pouvez aussi changer de modèle pendant un chat via le sélecteur de modèle du prompt.",
   provider: 'Fournisseur',
   model: 'Modèle',
   applying: 'Application...',
