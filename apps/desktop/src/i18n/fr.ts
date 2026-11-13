@@ -682,7 +682,7 @@ export const frOverrides = {
   },
   language: {
     label: 'Langue',
-    description: "Choisissez la langue de l'interface du desktop.",
+    description: "Choisissez la langue de l'interface.",
     saving: 'Enregistrement de la langue…',
     saveError: 'Échec de la mise à jour de la langue',
     switchTo: 'Changer de langue',
@@ -988,7 +988,7 @@ export const frOverrides = {
     appearance: {
       chatTextScaleTitle: 'Taille du texte du chat',
       chatTextScaleDesc:
-        'Ajuste le texte des conversations et de la saisie par rapport à l’échelle de l’interface. Les barres latérales et les contrôles gardent leur taille.',
+        'Ajuste la taille du texte des conversations et de la zone de saisie, sans modifier la taille des autres éléments de l'interface.',
       title: 'Apparence',
       intro:
         'Exclusif au desktop. Le mode contrôle la luminosité ; le thème contrôle la palette et le chrome de la conversation.',
@@ -996,44 +996,44 @@ export const frOverrides = {
       colorModeDesc: 'Choisissez un mode fixe ou laissez Unitalk suivre le paramètre système.',
       toolViewTitle: "Affichage des appels d'outil",
       toolViewDesc:
-        'Le mode Produit masque les charges utiles brutes ; le mode Technique affiche les entrées/sorties complètes.',
+        'Le mode Produit masque les données techniques brutes ; le mode Technique affiche les entrées/sorties complètes.',
       hideCodeDiffsTitle: 'Masquer les diffs de code',
       hideCodeDiffsDesc:
         'Afficher les modifications de fichiers sous forme de lignes d’outil avec le nombre de lignes ajoutées/supprimées, sans le code.',
       hideThreadTimelineTitle: 'Masquer les barres de chronologie',
-      hideThreadTimelineDesc: 'Masquer les barres de navigation le long du bord droit de chaque conversation.',
+      hideThreadTimelineDesc: 'Masquez les barres de navigation situées à droite des conversations.',
       reasoningCollapsedTitle: 'Réduire le raisonnement par défaut',
       reasoningCollapsedDesc:
-        "Conserver le raisonnement diffusé en continu sans le développer tant que vous ne l'ouvrez pas.",
+        "Conserver le raisonnement diffusé en continu masqué par défaut avec la possibilité de le développer à tout moment.",
       uiScaleTitle: "Échelle de l'interface",
       uiScaleDesc: (percent: number) =>
-        `Redimensionne le texte et les contrôles dans toute l'application. Cmd/Ctrl avec +, - et 0 fonctionne aussi. Actuel : ${percent}%.`,
-      sessionDensityTitle: 'Densité de la liste des sessions',
+        `Redimensionne le texte et les éléments de l'interface dans toute l'application. Cmd/Ctrl avec +, - et 0 fonctionne aussi. Taille actuelle : ${percent}%.`,
+      sessionDensityTitle: 'Affichage de l'historique des sessions',
       sessionDensityDesc:
-        'Choisissez la quantité de contexte affichée sous les titres de session dans la barre latérale.',
+        'Choisissez le niveau de détail affiché sous les titres de session dans la barre latérale.',
       sessionDensityCompact: 'Compacte',
       sessionDensityComfortable: 'Confortable',
       sessionDensityDetailed: 'Détaillée',
       tabStripTitle: "Barre d'onglets",
       tabStripDesc:
-        "Affiche les onglets au-dessus d'une zone. Le mode automatique les masque lorsqu'une zone ne contient qu'un seul panneau.",
+        "Choisissez quand afficher la barre d'onglets. En mode automatique, elle est masquée lorsqu'un seul panneau est ouvert.",
       tabStripAuto: 'Automatique',
       tabStripAlways: 'Toujours',
       tabStripNever: 'Jamais',
-      appActionsTitle: "Actions de l'application",
+      appActionsTitle: "Position des boutons de l'application",
       appActionsDesc:
-        'Choisissez le côté de la barre de titre où placer Paramètres, Disposition et HUD. Le côté droit laisse de la place aux onglets à gauche.',
+        'Choisissez d'afficher les boutons Paramètres, Disposition et HUD à gauche ou à droite de la barre supérieure.',
       appActionsLeft: 'À gauche',
       appActionsRight: 'À droite',
       terminalFontTitle: 'Police du terminal',
       terminalFontDesc:
-        'Choisissez une police installée pour les terminaux Desktop. Les Nerd Fonts affichent correctement Powerlevel10k et les icônes du shell ; laissez vide pour utiliser JetBrains Mono intégré.',
+        'Choisissez la police d'écriture utilisée pour les terminaux Desktop. Les Nerd Fonts affichent correctement Powerlevel10k et les icônes du shell ; laissez vide pour utiliser JetBrains Mono intégré.',
       terminalFontPlaceholder: 'MesloLGS NF ou une pile de polices CSS',
       terminalFontPreview: 'Aperçu des glyphes',
       terminalFontReset: 'Utiliser la valeur par défaut',
       chatFontTitle: 'Police de la conversation',
       chatFontDesc:
-        "Choisissez une police installée pour la conversation et le reste de l'application. Pratique pour des polices plus lisibles comme OpenDyslexic ; laissez vide pour utiliser celle du thème.",
+        "Personnalisez la police d'écriture des conversations et de l'application. Vous pouvez notamment choisir une police adaptée à vos besoins de lecture, comme OpenDyslexic. Laissez ce champ vide pour conserver la police du thème.",
       chatFontPlaceholder: 'OpenDyslexic ou une pile de polices CSS',
       chatFontPreview: 'Aperçu',
       chatFontSample: 'Portez ce vieux whisky au juge blond qui fume. 0123456789',
@@ -1059,15 +1059,15 @@ export const frOverrides = {
         sidebar: 'Barre latérale uniquement'
       },
       backdropTitle: 'Arrière-plan de la conversation',
-      backdropDesc: "L'image de statue discrète derrière la conversation.",
+      backdropDesc: "Affichez ou masquez l'image décorative en arrière-plan des conversations.",
       userBubbleTitle: 'Bulle des messages',
-      userBubbleDesc: 'Transparence de vos messages : fond opaque à 0 ; seul le contour reste visible à 100.',
+      userBubbleDesc: 'Ajustez la transparence des bulles de vos messages. À 0 %, le fond est opaque, à 100 %, seul le contour reste visible.',
       textDirectionTitle: 'Sens du texte',
       textDirectionDesc:
-        "Sens d'écriture des messages et du champ de saisie. Auto suit la première lettre de chaque paragraphe ; choisissez un sens quand un texte mixte s'aligne mal. Le code reste toujours de gauche à droite.",
+        "Choisissez le sens d'écriture des messages et de la zone de saisie. En mode automatique, il s'adapte à la langue de chaque paragraphe. Le code reste toujours affiché de gauche à droite.",
       textDirection: { auto: 'Auto', rtl: 'De droite à gauche', ltr: 'De gauche à droite' },
       introSplashTitle: "Écran d'accueil",
-      introSplashDesc: "Le logo et l'invite affichés dans une conversation vide.",
+      introSplashDesc: "Le logo et le prompt affichés dans une conversation vide.",
       modelPricingTitle: 'Tarifs des modèles',
       modelPricingDesc:
         "Affiche les prix d'entrée, de sortie et de lecture du cache par million de jetons dans le sélecteur de modèle.",
@@ -1083,7 +1083,7 @@ export const frOverrides = {
         "Laissez Unitalk vous guider dans l'application en assombrissant l'écran et en mettant chaque étape en évidence.",
       composerPopoutTitle: 'Détacher la zone de saisie',
       composerPopoutDesc:
-        'Permet de faire glisser la zone de saisie hors de son emplacement. Désactivé, elle reste ancrée en bas.',
+        'Déplacez librement la zone de saisie dans la fenêtre. Désactivé, elle reste ancrée en bas.',
       fileBrowserTitle: 'Navigateur de fichiers',
       fileBrowserDesc:
         "Affiche le navigateur de fichiers à côté du chat lorsqu'un espace de travail est ouvert. Le bouton de la barre de titre modifie aussi ce réglage.",
@@ -1092,7 +1092,7 @@ export const frOverrides = {
         "Des cœurs flottants apparaissent lorsque vous dites merci, « je t'aime », « good bot » ou envoyez un cœur. Cette option est indépendante des réactions aux messages ci-dessus.",
       embedsTitle: 'Intégrations en ligne',
       embedsDesc:
-        "Les aperçus enrichis se chargent depuis des sites tiers (YouTube, X, …). Demander affiche un espace réservé jusqu'à ce que vous autorisiez chacun ; Toujours les charge automatiquement ; Désactivé conserve les liens simples.",
+        "Les aperçus enrichis se chargent depuis des sites tiers (YouTube, X, …). Avec "Demander" votre autorisation est requise avant de charger chaque aperçu. Toujours les charge automatiquement ; Désactivé conserve les liens simples.",
       embedsAsk: 'Demander',
       embedsAlways: 'Toujours',
       embedsOff: 'Désactivé',
@@ -1106,7 +1106,7 @@ export const frOverrides = {
       technical: 'Technique',
       technicalDesc: 'Inclure les arguments/résultats bruts des outils et les détails de bas niveau.',
       themeTitle: 'Thème',
-      themeDesc: "Palettes desktop uniquement. Le mode sélectionné s'applique par-dessus.",
+      themeDesc: "Palettes desktop uniquement. Le thème sélectionné s'adapte au mode d'affichage (clair, sombre ou système).",
       themeSearchPlaceholder: 'Rechercher dans vos thèmes ou sur le Marketplace VS Code…',
       themeProfileNote: profile => `Enregistré pour le profil ${profile} — chaque profil conserve son propre thème.`,
       installTitle: 'Installer depuis VS Code',
@@ -1368,10 +1368,10 @@ export const frOverrides = {
       codeExecution: {
         mode: "Degré de restriction de l'exécution du code au projet actuel."
       },
-      fileReadMaxChars: 'Nombre maximal de caractères que Unitalk peut lire dans une demande de fichier.',
+      fileReadMaxChars: 'Nombre maximal de caractères qu'Unitalk peut lire dans une demande de fichier.',
       approvals: {
         mode: 'Comment Unitalk gère les commandes nécessitant une approbation explicite.',
-        timeout: "Durée d'attente des invites d'approbation avant expiration."
+        timeout: "Durée d'attente des prompts d'approbation avant expiration."
       },
       security: {
         redactSecrets: "Masque les secrets détectés du contenu visible par le modèle lorsque c'est possible."
@@ -1551,7 +1551,7 @@ export const frOverrides = {
         "Empêcher F12 d'ouvrir les outils de développement. Ctrl+Maj+I (ou Cmd+Option+I sur Mac) continue de fonctionner.",
       attachmentSizeTitle: 'Taille maximale de chargement des aperçus / images',
       attachmentSizeDesc:
-        "Taille maximale d'un fichier local que Desktop chargera pour les aperçus et les pièces jointes image, en Mo. La valeur par défaut est 16. Les pièces jointes distantes non-image utilisent une limite distincte de 256 Mo. Une valeur très élevée charge le fichier entier en mémoire et peut figer ou planter l'application.",
+        "Taille maximale d'un fichier local que l'application chargera pour les aperçus et les pièces jointes image, en Mo. La valeur par défaut est 16. Les pièces jointes distantes non-image utilisent une limite distincte de 256 Mo. Une valeur très élevée charge le fichier entier en mémoire et peut figer ou planter l'application.",
       attachmentSizeUnit: 'Mo',
       attachmentSizeLabel: 'Taille maximale de chargement des aperçus / images en mégaoctets',
       showOptions: 'Afficher les options'
@@ -4807,7 +4807,7 @@ export const frOverrides = {
   },
   interfaceMode: {
     title: 'Mode d’interface',
-    hint: 'Modifie ce qui est affiché, pas ce que Unitalk peut faire.',
+    hint: 'Modifie ce qui est affiché, pas les fonctionnalités d'Unitalk.',
     sessionNote:
       'Défini par le mode Simple. Une modification ici dure le temps de cette session ; passez en mode Avancé pour la conserver.',
     simple: {
