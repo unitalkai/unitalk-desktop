@@ -1159,7 +1159,7 @@ export const frOverrides = {
     },
     fieldLabels: defineFieldCopy({
       model: 'Modèle par défaut',
-      modelContextLength: 'Fenêtre de contexte du modèle principal (forçage)',
+      modelContextLength: 'Fenêtre de contexte du modèle principal',
       fallbackProviders: 'Modèles de secours',
       toolsets: "Ensembles d'outils activés",
       timezone: 'Fuseau horaire',
@@ -1336,7 +1336,7 @@ export const frOverrides = {
     fieldDescriptions: defineFieldCopy({
       model: 'Utilisé pour les nouvelles conversations sauf si vous choisissez un autre modèle dans le compositeur.',
       modelContextLength:
-        'Remplace la fenêtre de contexte détectée du modèle de conversation PRINCIPAL uniquement (en jetons). Laissez 0 pour utiliser la valeur détectée du modèle sélectionné. N’affecte pas les modèles auxiliaires/MoA.',
+        'Laissez 0 pour utiliser la fenêtre de contexte par défaut du modèle ou saisissez une valeur personnalisée (en tokens). Ce réglage s'applique uniquement au modèle principal, pas aux modèles auxiliaires ni au Mixture of Agents (MOA).',
       fallbackProviders: 'Entrées fournisseur:modèle de secours à essayer si le modèle par défaut échoue.',
       display: {
         personality: "Style par défaut de l'assistant pour les nouvelles sessions.",
