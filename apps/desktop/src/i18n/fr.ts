@@ -1380,14 +1380,14 @@ export const frOverrides = {
         enabled: 'Créez automatiquement des points de restauration avant chaque modification de fichier, afin de pouvoir revenir à une version précédente.'
       },
       memory: {
-        memoryEnabled: 'Sauvegarder des mémoires durables pouvant aider les sessions futures.',
-        userProfileEnabled: 'Maintenir un profil compact des préférences utilisateur.'
+        memoryEnabled: 'Sauvegarde des mémoires durables pouvant aider les sessions futures.',
+        userProfileEnabled: 'Maintient un profil compact des préférences utilisateur.'
       },
       context: {
-        engine: 'Stratégie pour gérer les longues conversations proches de la limite de contexte.'
+        engine: 'Stratégie pour gérer les longues conversations lorsque la limite de contexte du modèle IA est presque atteinte.'
       },
       compression: {
-        enabled: 'Résumer le contexte ancien quand les conversations grossissent.',
+        enabled: 'Résume automatiquement les échanges précédents lorsque la conversation devient trop longue, afin de libérer de l'espace dans la fenêtre de contexte.',
         codexGpt55Autoraise: 'Relever la compression à 85 % pour les modèles ChatGPT Codex OAuth pris en charge.'
       },
       auxiliary: {
