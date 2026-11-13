@@ -679,7 +679,12 @@ declare global {
       signalDeepLinkReady?: () => Promise<{ ok: boolean }>
       /** Clerk SSO OAuth callback listener: token arrives from the system browser redirect. */
       onUnitalkOauthCallback?: (callback: (token: string) => void) => () => void
-      probePluginRepo?: (payload: { identifier?: string; repo?: string }) => Promise<{
+      probePluginRepo?: (payload: {
+        identifier?: string
+        repo?: string
+        /** A catalog pick's pin: the repository is read at that commit, not its default branch. */
+        ref?: string
+      }) => Promise<{
         ok: boolean
         agent: boolean
         desktop: boolean

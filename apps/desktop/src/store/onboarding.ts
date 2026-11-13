@@ -12,6 +12,7 @@ import {
   type ProfileScope,
   setEnvVar,
   startOAuthLogin,
+  submitClerkToken,
   submitOAuthCode,
   validateProviderCredential
 } from '@/hermes'
@@ -37,7 +38,7 @@ import { afterOnboardingSurfaceClear, onboardingSurfaceOpen } from '@/store/onbo
 import { captureOnboardingScope, type OnboardingScope } from '@/store/onboarding-scope'
 import { requestRoute } from '@/store/recovery-requests'
 import { setModelPickerOpen } from '@/store/session'
-import { startClerkAuth, getClerkToken, clearClerkToken } from '@/store/unitalk-auth'
+import { clearClerkToken, getClerkToken, startClerkAuth } from '@/store/unitalk-auth'
 import type { AppHandoffStatus, OAuthPollResponse, OAuthProvider, OAuthStartResponse } from '@/types/hermes'
 
 type PkceStart = Extract<OAuthStartResponse, { flow: 'pkce' }>
