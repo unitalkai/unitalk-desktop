@@ -1,25 +1,50 @@
 import { atom } from 'nanostores'
 
-import { startLocalhostCallbackServer } from '@/store/unitalk-auth-localhost'
+/**
+ * Clerk Electron SDK integration for Unitalk Desktop.
+ *
+ * Instead of a localhost callback server or custom OAuth plumbing, we
+ * open the system browser (or an Electron BrowserWindow) that loads the
+ * Clerk-hosted sign-in page (clerk.unitalk.ai).  Clerk handles the full
+ * OAuth flow (Google, Microsoft, email) and redirects to a custom
+ * protocol URL:
+ *
+ *   unitalk://callback?token=<clerk_session_jwt>
+ *
+ * The Electron main process already intercepts unitalk:// deeplinks
+ * (see electron/main.ts → DEEPLINK_SCHEMES) and forwards the token to
+ * the renderer via the 'unitalk-oauth-callback' IPC channel.
+ *
+ * This module listens for that IPC event, persists the token, and
+ * exposes atoms that the rest of the app can subscribe to.
+ */
+
+// ── Constants ────────────────────────────────────────────────────────
 
 const CLERK_TOKEN_KEY = 'unitalk-clerk-token'
+
+/** Clerk publishable key – identifies the Unitalk Clerk instance. */
 const CLERK_PUBLISHABLE_KEY = 'pk_live_Y2xlcmsudW5pdGFsay5haSQ'
 
-const CLERK_SIGN_IN_BASE = 'https://unitalk.ai/home/inscription?source=collaborator-identity'
+/** Base URL of the Clerk-hosted sign-in page. */
+const CLERK_SIGN_IN_URL = 'https://clerk.unitalk.ai/sign-in'
 
 /**
- * Whether a Clerk SSO token is stored (persisted across launches).
- * Does NOT validate expiry — the onboarding store and gateway
- * credential verification do that at use time.
+ * After sign-in, Clerk will redirect the browser to this URL with the
+ * session token as a query parameter.  Electron's deeplink handler
+ * forwards it to us via IPC.
  */
+const CLERK_REDIRECT_URL = 'unitalk://callback'
+
+// ── Atoms (reactive state) ──────────────────────────────────────────
+
+/** True when a Clerk session JWT is stored (does NOT validate expiry). */
 export const $isAuthenticated = atom<boolean>(hasClerkToken())
 
-/**
- * Email extracted from the stored Clerk JWT, or null when no token
- * is present / the JWT is unparseable (not an auth verification —
- * the payload is decoded only for display).
- */
+/** Email extracted from the stored Clerk JWT payload, or null. */
 export const $userEmail = atom<null | string>(readEmailFromToken())
+
+// ── Token helpers ────────────────────────────────────────────────────
 
 function hasClerkToken(): boolean {
   try {
@@ -39,18 +64,11 @@ function readClerkToken(): null | string {
 
 function readEmailFromToken(): null | string {
   const token = readClerkToken()
-  if (!token) {
-    return null
-  }
+  if (!token) return null
 
   try {
-    // A Clerk session JWT is a standard three-segment base64url JWT.
-    // The payload sits in segment index 1.
     const segments = token.split('.')
-    if (segments.length !== 3) {
-      return null
-    }
-
+    if (segments.length !== 3) return null
     const payload = JSON.parse(atob(segments[1]))
     return typeof payload.email === 'string' ? payload.email : null
   } catch {
@@ -58,94 +76,57 @@ function readEmailFromToken(): null | string {
   }
 }
 
+// ── Public API ───────────────────────────────────────────────────────
+
 /**
- * Open the Unitalk Cloud sign-in page in the system browser and
- * wait for the Clerk OAuth callback.
+ * Open the Clerk sign-in page in the system browser.
  *
- * Strategy (tried in order):
- * 1. Localhost callback server — most reliable, works on all platforms
- * 2. Custom protocol `unitalk://callback` — fallback when port binding fails
+ * The sign-in URL includes:
+ *   - after_sign_in_url  → where Clerk redirects after success
+ *   - after_sign_up_url  → same for new accounts
+ *   - redirect_url       → the custom protocol the Desktop listens on
  *
- * The localhost server binds on a random port and listens for
- * GET /callback?token=X. Clerk redirects there, the server captures
- * the token, stores it, and closes. The browser shows a completion page.
- *
- * Falls back to the Electron deep-link handler if the server cannot start.
+ * Clerk handles the full OAuth flow (Google, Microsoft, email/password).
+ * No localhost server, no manual token exchange – just open the URL and
+ * wait for the IPC callback.
  */
 export async function startClerkAuth(): Promise<void> {
-  try {
-    // Primary path: localhost callback server
-    const server = startLocalhostCallbackServer()
+  const params = new URLSearchParams({
+    after_sign_in_url: CLERK_REDIRECT_URL,
+    after_sign_up_url: CLERK_REDIRECT_URL,
+    redirect_url: CLERK_REDIRECT_URL,
+    client_id: CLERK_PUBLISHABLE_KEY
+  })
 
-    // The url getter yields the address once listening. Use a small
-    // polling loop to wait for it, or fall through to the fallback.
-    let callbackUrl = server.url
-    if (!callbackUrl) {
-      // Wait up to 50ms for the server to be listening
-      for (let i = 0; i < 10 && !callbackUrl; i++) {
-        await new Promise(r => setTimeout(r, 5))
-        callbackUrl = server.url
-      }
-    }
+  const signInUrl = `${CLERK_SIGN_IN_URL}?${params.toString()}`
 
-    if (!callbackUrl) {
-      server.close()
-      throw new Error('Could not bind localhost callback server')
-    }
-
-    const redirectUri = encodeURIComponent(callbackUrl)
-
-    const signInUrl = `${CLERK_SIGN_IN_BASE}?redirect_uri=${redirectUri}`
-
-    if (window.hermesDesktop?.openExternal) {
-      await window.hermesDesktop.openExternal(signInUrl)
-    } else {
-      window.open(signInUrl, '_blank', 'noopener,noreferrer')
-    }
-
-    // Wait for the token to arrive via the localhost callback
-    const token = await server.promise
-    if (token && String(token).trim()) {
-      storeClerkToken(String(token).trim())
-    }
-  } catch {
-    // Fallback path: custom protocol unitalk://callback
-    const signInUrl = 'https://unitalk.ai/home/inscription?redirect=unitalk://callback'
-
-    if (window.hermesDesktop?.openExternal) {
-      await window.hermesDesktop.openExternal(signInUrl)
-    } else {
-      window.open(signInUrl, '_blank', 'noopener,noreferrer')
-    }
+  if (window.hermesDesktop?.openExternal) {
+    await window.hermesDesktop.openExternal(signInUrl)
+  } else {
+    window.open(signInUrl, '_blank', 'noopener,noreferrer')
   }
 }
 
-/**
- * Retrieve the stored Clerk session token, or null when none is present.
- */
+/** Retrieve the stored Clerk session JWT, or null. */
 export function getClerkToken(): null | string {
   return readClerkToken()
 }
 
-/**
- * The Clerk publishable key used by the frontend API.
- * Configure via environment variable or the build system.
- */
+/** The Clerk publishable key (public – safe to ship in the client). */
 export function getClerkPublishableKey(): string {
   return CLERK_PUBLISHABLE_KEY
 }
 
 /**
- * Persist a Clerk session token and update derived atoms.
- * Call this from the IPC listener wired to
- * Electron's `unitalk-oauth-callback` channel, or from the
- * localhost callback server.
+ * Persist a Clerk session token and update reactive atoms.
+ * Called by the IPC listener (startListeningForCallback) when
+ * Electron's main process delivers a deeplink token.
  */
 export function storeClerkToken(token: string): void {
   try {
     window.localStorage.setItem(CLERK_TOKEN_KEY, token)
   } catch {
-    // localStorage unavailable — auth is session-only.
+    // localStorage unavailable — auth is session-only
   }
 
   $isAuthenticated.set(true)
@@ -157,7 +138,7 @@ export function clearClerkToken(): void {
   try {
     window.localStorage.removeItem(CLERK_TOKEN_KEY)
   } catch {
-    // localStorage unavailable — nothing to clear.
+    // localStorage unavailable
   }
 
   $isAuthenticated.set(false)
@@ -165,11 +146,11 @@ export function clearClerkToken(): void {
 }
 
 /**
- * Start listening for the Electron main-process deep-link callback
- * (fallback path when the localhost server cannot start).
- * Returns an unsubscribe function. Safe to call multiple times —
- * each call starts a new listener; the caller should clean up the
- * previous one first.
+ * Start listening for the Electron main-process deep-link callback.
+ * When Clerk redirects to `unitalk://callback?token=…`, the main process
+ * extracts the token and sends it via IPC to the renderer.
+ *
+ * Returns an unsubscribe function.
  */
 export function startListeningForCallback(): () => void {
   return window.hermesDesktop?.onUnitalkOauthCallback?.(token => {
@@ -181,9 +162,9 @@ export function startListeningForCallback(): () => void {
 
 /**
  * Return the Clerk session token as the Unitalk AI Gateway API key.
- * This wires Clerk SSO directly to the LiteLLM gateway — the user
- * never sees or configures an API key. The token is submitted as
- * `UNITALK_API_KEY` env var to the backend and passed as
+ * This wires Clerk SSO directly to the LiteLLM gateway – the user
+ * never sees or configures an API key.  The token is submitted as
+ * the `UNITALK_API_KEY` env var to the backend and passed as
  * `Authorization: Bearer <token>` to llmgateway.unitalk.ai.
  */
 export function getGatewayApiKey(): null | string {
