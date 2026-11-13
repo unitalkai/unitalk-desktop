@@ -1,6 +1,7 @@
 import type { ModelOptionProvider } from '@hermes/shared'
 import { atom } from 'nanostores'
 
+import { submitClerkToken } from '@/api/config'
 import { invalidateAllConnectors } from '@/app/capabilities/connectors/data/keys'
 import {
   cancelOAuthSession,
@@ -16,6 +17,7 @@ import {
   validateProviderCredential
 } from '@/hermes'
 import { translateNow } from '@/i18n'
+import { getClerkSessionToken } from '@/lib/clerk-session'
 import { writeClipboardText } from '@/lib/clipboard'
 import { restOfLongPollGap } from '@/lib/long-poll'
 import { isProviderSetupErrorMessage } from '@/lib/provider-setup-errors'
@@ -37,7 +39,6 @@ import { afterOnboardingSurfaceClear, onboardingSurfaceOpen } from '@/store/onbo
 import { captureOnboardingScope, type OnboardingScope } from '@/store/onboarding-scope'
 import { requestRoute } from '@/store/recovery-requests'
 import { setModelPickerOpen } from '@/store/session'
-import { startClerkAuth, getClerkToken, clearClerkToken } from '@/store/unitalk-auth'
 import type { AppHandoffStatus, OAuthPollResponse, OAuthProvider, OAuthStartResponse } from '@/types/hermes'
 
 type PkceStart = Extract<OAuthStartResponse, { flow: 'pkce' }>
@@ -998,34 +999,29 @@ export async function startProviderOAuth(provider: OAuthProvider, ctx: Onboardin
   flowScope = ctx.scope
   clearPoll()
 
-  // Unitalk Cloud: Clerk SSO in the system browser, not a backend OAuth session.
-  // The token arrives via the localhost callback server (or Electron deep-link
-  // fallback). After capture, it is submitted to the gateway for JWT validation
-  // and persistent storage in auth.json.
+  // Unitalk Cloud: the Clerk session is established at the app gate, so
+  // onboarding only exchanges its token for a gateway session.
   if (provider.id === 'unitalk') {
     setFlow({ status: 'starting', provider })
 
     try {
-      await startClerkAuth()
+      const token = await getClerkSessionToken()
 
       if (generation !== flowGeneration) {
         return
       }
 
-      // Submit the captured token to the gateway for validation + storage
-      const token = getClerkToken()
       if (!token) {
         setFlow({ status: 'error', provider, message: 'Sign-in completed but no token was returned.' })
+
         return
       }
 
       try {
         await submitClerkToken(token, ctx.scope)
       } catch (submitError) {
-        // Token validation failed (invalid, expired, JWKS unreachable).
-        // Clear the bad token and show an error.
-        clearClerkToken()
         setFlow({ status: 'error', provider, ...signInDidNotFinish(provider, submitError) })
+
         return
       }
 

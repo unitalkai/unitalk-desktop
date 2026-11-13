@@ -126,6 +126,8 @@ import {
 } from './bundle-swap'
 import { CHALLENGE_PARTITION } from './challenge-window'
 import { registerChallengeWindowIpc } from './challenge-window-ipc'
+import { cleanupClerkBridge, installClerkBridge, registerClerkRendererProtocol } from './clerk'
+import { CLERK_RENDERER_SCHEME } from './clerk-config'
 import { provisionCliLinks } from './cli-provision'
 import { readClipboardImagePng } from './clipboard-image'
 import { registerClipboardTextIpc } from './clipboard-ipc'
@@ -547,6 +549,7 @@ import { missingRendererAssets, presentRendererIndexes } from './renderer-bundle
 import { applyLaunchSwitches, readDesktopLaunchConfig } from './renderer-heap-flags'
 import { loadRendererLoadErrorPage } from './renderer-load-error-page'
 import { attachRendererConsoleCapture, formatRendererBoundaryReport } from './renderer-log'
+import { isTrustedRendererUrl, rendererBaseUrl } from './renderer-url'
 import { fetchRosterSourceData } from './roster-source-fetch'
 import { rosterSourceStatus } from './roster-source-status'
 import { registerSaveDialogIpc } from './save-text-file'
@@ -781,6 +784,26 @@ const IS_PACKAGED = app.isPackaged || Boolean(process.env.HERMES_DESKTOP_IS_PACK
 const IS_MAC = process.platform === 'darwin'
 const IS_WINDOWS = process.platform === 'win32'
 const IS_WSL = isWslEnvironment()
+
+const CLERK_RUNTIME = installClerkBridge({
+  devServer: DEV_SERVER ?? null,
+  registerProtocol: process.env.HERMES_DESKTOP_SKIP_PROTOCOL_REGISTRATION !== '1'
+})
+
+const CUSTOM_RENDERER_SCHEME = CLERK_RUNTIME.enabled && !DEV_SERVER
+
+ipcMain.on('hermes:clerk:enabled', event => {
+  event.returnValue = CLERK_RUNTIME.enabled
+})
+
+function rendererBase(): string {
+  return rendererBaseUrl({
+    customScheme: CUSTOM_RENDERER_SCHEME,
+    devServer: DEV_SERVER ?? null,
+    rendererIndexPath: CUSTOM_RENDERER_SCHEME || DEV_SERVER ? undefined : resolveRendererIndex()
+  })
+}
+
 // Truthful macOS kernel major (Tahoe = 25). Product version lies (16 vs 26) per
 // build SDK, so gate Tahoe workarounds on Darwin instead.
 const DARWIN_MAJOR = IS_MAC ? Number.parseInt(os.release(), 10) || 0 : 0
@@ -1808,14 +1831,14 @@ protocol.registerSchemesAsPrivileged([
     }
   },
   {
-    scheme: 'unitalk',
+    scheme: CLERK_RENDERER_SCHEME,
     privileges: {
       standard: true,
       secure: true,
       supportFetchAPI: true,
       corsEnabled: true,
       allowServiceWorkers: false,
-      stream: false
+      stream: true
     }
   }
 ])
@@ -11920,8 +11943,21 @@ function wireCommonWindowHandlers(win, { zoom = true }: { zoom?: boolean } = {})
       // A destroyed frame is gone; nothing to restore.
     }
   })
+
+  const isTrustedRendererNavigation = (url: string) =>
+    isTrustedRendererUrl(url, { customScheme: CUSTOM_RENDERER_SCHEME, devServer: DEV_SERVER ?? null })
+
   win.webContents.on('will-navigate', (event, url) => {
-    if ((DEV_SERVER && url.startsWith(DEV_SERVER)) || (!DEV_SERVER && url.startsWith('file:'))) {
+    if (isTrustedRendererNavigation(url)) {
+      return
+    }
+
+    event.preventDefault()
+    void openExternalUrl(url)
+  })
+
+  win.webContents.on('will-redirect', (event, url) => {
+    if (isTrustedRendererNavigation(url)) {
       return
     }
 
@@ -12130,9 +12166,10 @@ function spawnSecondaryWindow({
     win,
     buildSessionWindowUrl(sessionId, {
       connectionId,
+      customScheme: CUSTOM_RENDERER_SCHEME,
       devServer: DEV_SERVER,
       profile,
-      rendererIndexPath: DEV_SERVER ? undefined : resolveRendererIndex(),
+      rendererIndexPath: DEV_SERVER || CUSTOM_RENDERER_SCHEME ? undefined : resolveRendererIndex(),
       watch
     }),
     'Session window'
@@ -12220,8 +12257,9 @@ function spawnBrowserWindow(tabId) {
   loadWindowUrl(
     win,
     buildBrowserWindowUrl(tabId, {
+      customScheme: CUSTOM_RENDERER_SCHEME,
       devServer: DEV_SERVER,
-      rendererIndexPath: DEV_SERVER ? undefined : resolveRendererIndex()
+      rendererIndexPath: DEV_SERVER || CUSTOM_RENDERER_SCHEME ? undefined : resolveRendererIndex()
     }),
     'Browser window'
   )
@@ -12338,8 +12376,9 @@ function createInstanceWindow(
     win,
     buildInstanceWindowUrl({
       ...route,
+      customScheme: CUSTOM_RENDERER_SCHEME,
       devServer: DEV_SERVER,
-      rendererIndexPath: DEV_SERVER ? undefined : resolveRendererIndex()
+      rendererIndexPath: DEV_SERVER || CUSTOM_RENDERER_SCHEME ? undefined : resolveRendererIndex()
     }),
     'Instance window'
   )
@@ -12350,6 +12389,7 @@ function createInstanceWindow(
 // A macOS-only ambient wake cue. It is deliberately a gateway-less helper
 // window: the active renderer owns voice state and sends only the visual phase.
 const wakeIndicatorController = createWakeIndicatorWindowController({
+  customScheme: CUSTOM_RENDERER_SCHEME,
   devServer: DEV_SERVER,
   isMac: IS_MAC,
   loadWindowUrl,
@@ -12392,7 +12432,7 @@ function petOverlayUrl() {
     return `${DEV_SERVER.endsWith('/') ? DEV_SERVER.slice(0, -1) : DEV_SERVER}/?win=overlay#/`
   }
 
-  return `${pathToFileURL(resolveRendererIndex()).toString()}?win=overlay#/`
+  return `${rendererBase()}?win=overlay#/`
 }
 
 function spawnPetOverlayWindow(bounds) {
@@ -12893,9 +12933,10 @@ function hudUrl(sessionId, profile) {
   // non-primary profile's conversation resolves the session id against the
   // wrong backend and falls back to the default profile's last session.
   return buildHudWindowUrl(sessionId, {
+    customScheme: CUSTOM_RENDERER_SCHEME,
     devServer: DEV_SERVER,
     profile,
-    rendererIndexPath: DEV_SERVER ? undefined : resolveRendererIndex()
+    rendererIndexPath: DEV_SERVER || CUSTOM_RENDERER_SCHEME ? undefined : resolveRendererIndex()
   })
 }
 
@@ -13180,7 +13221,7 @@ function quickEntryUrl() {
     return `${DEV_SERVER.endsWith('/') ? DEV_SERVER.slice(0, -1) : DEV_SERVER}/?win=quick#/`
   }
 
-  return `${pathToFileURL(resolveRendererIndex()).toString()}?win=quick#/`
+  return `${rendererBase()}?win=quick#/`
 }
 
 function spawnQuickEntryWindow() {
@@ -13658,7 +13699,7 @@ function createWindow() {
             errorDescription:
               'The desktop renderer crashed repeatedly (Windows STATUS_STACK_BUFFER_OVERRUN / 0xC0000409). GPU fallback could not recover the window.',
             repairHint: 'hermes desktop --force-build',
-            reloadUrl: DEV_SERVER || pathToFileURL(resolveRendererIndex()).toString()
+            reloadUrl: rendererBase()
           })
 
           return
@@ -13715,7 +13756,7 @@ function createWindow() {
           url: details?.url,
           errorDescription: 'The desktop renderer failed to load repeatedly after the update.',
           repairHint: 'hermes desktop --force-build',
-          reloadUrl: DEV_SERVER || pathToFileURL(resolveRendererIndex()).toString()
+          reloadUrl: rendererBase()
         })
       },
       // #116472: the OS/Chromium can kill a renderer while the window is live (memory
@@ -13737,7 +13778,7 @@ function createWindow() {
           errorDescription:
             `The desktop UI process was terminated unexpectedly (reason: ${reason}${exit}). ` +
             'Your sessions and the background gateway are unaffected — reload to continue.',
-          reloadUrl: DEV_SERVER || pathToFileURL(resolveRendererIndex()).toString()
+          reloadUrl: rendererBase()
         })
       }
     },
@@ -13776,12 +13817,16 @@ function createWindow() {
       errorDescription: `The desktop renderer bundle is incomplete after the last update (${tornAssets.length} missing file(s)).`,
       missingAssets: tornAssets,
       repairHint: 'hermes desktop --force-build',
-      reloadUrl: pathToFileURL(rendererIndex).toString()
+      reloadUrl: rendererBaseUrl({
+        customScheme: CUSTOM_RENDERER_SCHEME,
+        devServer: DEV_SERVER ?? null,
+        rendererIndexPath: CUSTOM_RENDERER_SCHEME || DEV_SERVER ? undefined : rendererIndex
+      })
     })
   } else {
     loadWindowUrl(
       mainWindow,
-      DEV_SERVER || pathToFileURL(rendererIndex || resolveRendererIndex()).toString(),
+      rendererBase(),
       'Renderer'
     )
   }
@@ -16434,6 +16479,7 @@ app.on('before-quit', () => {
 // Close the pooled keep-alive sockets on quit so lingering connections can't
 // hold the event loop open or leak FDs past app teardown.
 app.on('will-quit', () => {
+  cleanupClerkBridge(CLERK_RUNTIME)
   closeGatewayTicketBridges()
   killTimedGitChildren()
   sshIsolatedKeepalives.stopAll()
@@ -17363,7 +17409,7 @@ ipcMain.handle('hermes:vscode-theme:search', async (_event, query) => searchMark
 // ---------------------------------------------------------------------------
 const HERMES_PROTOCOL = DEV_SERVER ? 'hermes-dev' : 'hermes'
 /** Schemes accepted when parsing inbound URLs (dev accepts both). */
-const DEEPLINK_SCHEMES = DEV_SERVER ? ['hermes-dev', 'hermes', 'unitalk'] : ['hermes', 'unitalk']
+const DEEPLINK_SCHEMES = DEV_SERVER ? ['hermes-dev', 'hermes'] : ['hermes']
 let _pendingDeepLink = null
 let _rendererReadyForDeepLink = false
 // Set by sendOpenUpdatesRequested() when the renderer cannot hear it yet.
@@ -17397,20 +17443,6 @@ function handleDeepLink(url) {
   if (!DEEPLINK_SCHEMES.includes(scheme)) {
     rememberLog(`[deeplink] ignoring scheme ${scheme} (expected ${DEEPLINK_SCHEMES.join(' or ')})`)
 
-    return
-  }
-
-  // unitalk://callback?token=X — Clerk SSO OAuth callback: relay the token
-  // to the renderer so the Unitalk Cloud auth store can persist it.
-  if (scheme === 'unitalk') {
-    const token = parsed.searchParams.get('token') || ''
-    if (token && mainWindow && !mainWindow.isDestroyed()) {
-      activateWindow(mainWindow)
-      mainWindow.webContents.send('unitalk-oauth-callback', token)
-      rememberLog(`[deeplink] unitalk callback token delivered`)
-    } else if (!token) {
-      rememberLog(`[deeplink] unitalk callback missing token`)
-    }
     return
   }
 
@@ -17644,6 +17676,11 @@ app.whenReady().then(() => {
   installMediaPermissions()
   installDownloadHandling()
   registerMediaProtocol()
+
+  if (CUSTOM_RENDERER_SCHEME) {
+    registerClerkRendererProtocol(path.dirname(resolveRendererIndex()))
+  }
+
   installEmbedReferer()
   installRemoteHeaderRules()
 
@@ -17680,9 +17717,9 @@ app.whenReady().then(() => {
   // it without the renderer visiting Settings. A failed registration is logged
   // here and surfaced in Settings via the IPC state (never silent).
   applyQuickEntrySettings(readQuickEntrySettings())
-  installCommandScreenshot({ rendererUrl: DEV_SERVER || pathToFileURL(resolveRendererIndex()).toString() })
+  installCommandScreenshot({ rendererUrl: rendererBase() })
   installHudModifierTap({
-    rendererUrl: DEV_SERVER || pathToFileURL(resolveRendererIndex()).toString(),
+    rendererUrl: rendererBase(),
     summon: () => {
       if (!isQuittingForHandoff && !backendShutdown.hasStarted()) {
         openHudWindow(null, null)

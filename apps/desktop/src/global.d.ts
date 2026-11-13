@@ -34,6 +34,11 @@ export type DesktopMachineProfile = MachineProfile
 declare global {
   interface Window {
     hermesDesktop: {
+      clerk?: {
+        enabled: boolean
+        host: string
+        scheme: string
+      }
       // Resolve a backend connection. Omit `profile` (or pass the primary) for
       // the window's backend; pass a named profile to dial/reuse that profile's
       // cached gateway descriptor.
@@ -677,8 +682,6 @@ declare global {
         callback: (payload: { kind: string; name: string; params: Record<string, string> }) => void
       ) => () => void
       signalDeepLinkReady?: () => Promise<{ ok: boolean }>
-      /** Clerk SSO OAuth callback listener: token arrives from the system browser redirect. */
-      onUnitalkOauthCallback?: (callback: (token: string) => void) => () => void
       probePluginRepo?: (payload: { identifier?: string; repo?: string }) => Promise<{
         ok: boolean
         agent: boolean
