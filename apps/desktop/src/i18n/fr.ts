@@ -869,7 +869,7 @@ export const frOverrides = {
     vault: {
       title: 'Mots de passe et identifiants',
       blurb:
-        "Demandez à l'agent de se connecter à un site : il vous demandera l'identifiant la première fois, puis pourra le réutiliser. Les mots de passe sont chiffrés sur cet ordinateur et remplis directement dans la page ; le modèle ne les voit jamais.",
+        "Demandez à l'agent de se connecter à un site : il vous demandera l'identifiant la première fois, puis pourra le réutiliser. Les mots de passe sont chiffrés sur cet ordinateur et complétés directement sur la page ; le modèle ne les voit jamais.",
       count: n => `${n} enregistré${n === 1 ? '' : 's'}`,
       loadFailed: 'Impossible de charger les éléments du coffre',
       empty: 'Aucun élément enregistré',
@@ -929,10 +929,10 @@ export const frOverrides = {
       sources: {
         title: 'Gestionnaires de mots de passe',
         blurb:
-          "Les gestionnaires de mots de passe installés sont repérés automatiquement. L'agent vous demande de déverrouiller l'un la première fois qu'il en a besoin (une fois par session) ; seul un jeton de session reste en mémoire, et l'agent ne voit jamais votre mot de passe principal ou aucun identifiant.",
+          "Les gestionnaires de mots de passe installés sont détectés automatiquement. L'agent vous demande de déverrouiller l'un la première fois qu'il en a besoin (une fois par session) ; seul un jeton de session reste en mémoire, et l'agent ne voit jamais votre mot de passe principal ou aucun identifiant.",
         toggleFailed: 'Impossible de mettre à jour le gestionnaire de mots de passe',
         notInstalled: name =>
-          `Non détecté. Installez l’outil en ligne de commande ${name} et connectez-vous ; Unitalk le repère automatiquement.`,
+          `Non détecté. Installez l’outil en ligne de commande ${name} et connectez-vous ; Unitalk le détecte automatiquement.`,
         disabledDesc: 'Détecté mais désactivé pour Unitalk.',
         lockedDesc:
           "Détecté. L'agent vous demandera de le déverrouiller lorsqu'il en a besoin, ou déverrouillez maintenant.",
@@ -1213,7 +1213,7 @@ export const frOverrides = {
         useRealProfile: 'Utiliser mon vrai profil de navigateur'
       },
       checkpoints: {
-        enabled: 'Points de contrôle de fichiers',
+        enabled: 'Points de restauration des fichiers',
         maxSnapshots: 'Limite de points de contrôle'
       },
       voice: {
@@ -1377,7 +1377,7 @@ export const frOverrides = {
         redactSecrets: "Masque les secrets détectés du contenu visible par le modèle lorsque c'est possible."
       },
       checkpoints: {
-        enabled: 'Créer des instantanés de restauration avant les modifications de fichiers.'
+        enabled: 'Créez automatiquement des points de restauration avant chaque modification de fichier, afin de pouvoir revenir à une version précédente.'
       },
       memory: {
         memoryEnabled: 'Sauvegarder des mémoires durables pouvant aider les sessions futures.',
