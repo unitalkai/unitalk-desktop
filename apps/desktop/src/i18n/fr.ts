@@ -1334,10 +1334,10 @@ export const frOverrides = {
       }
     }),
     fieldDescriptions: defineFieldCopy({
-      model: 'Utilisé pour les nouvelles conversations sauf si vous choisissez un autre modèle dans le compositeur.',
+      model: 'Utilisé pour les nouvelles conversations sauf si vous choisissez un autre modèle dans le prompt.',
       modelContextLength:
         'Laissez 0 pour utiliser la fenêtre de contexte par défaut du modèle ou saisissez une valeur personnalisée (en tokens). Ce réglage s'applique uniquement au modèle principal, pas aux modèles auxiliaires ni au Mixture of Agents (MOA).',
-      fallbackProviders: 'Entrées fournisseur:modèle de secours à essayer si le modèle par défaut échoue.',
+      fallbackProviders: 'Si votre modèle principal est indisponible ou ne répond pas, votre collaborateur IA bascule automatiquement sur un modèle de secours.',
       display: {
         personality: "Style par défaut de l'assistant pour les nouvelles sessions.",
         showReasoning: 'Afficher les sections de raisonnement quand le backend les fournit.'
