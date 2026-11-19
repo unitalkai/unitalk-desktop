@@ -22,7 +22,10 @@ export interface ClerkUserLike {
   }) => Promise<{ data: ClerkMembershipLike[]; total_count?: number }>
   id: string
   imageUrl?: null | string
-  primaryEmailAddress?: null | { emailAddress?: null | string }
+  primaryEmailAddress?: null | {
+    emailAddress?: null | string
+    verification?: null | { status?: null | string }
+  }
   username?: null | string
 }
 
@@ -33,6 +36,7 @@ export function summarizeClerkUser(user: ClerkUserLike | null | undefined): Cler
 
   return {
     email: user.primaryEmailAddress?.emailAddress ?? null,
+    emailVerified: user.primaryEmailAddress?.verification?.status === 'verified',
     fullName: user.fullName ?? null,
     id: user.id,
     imageUrl: user.imageUrl ?? null,

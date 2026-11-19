@@ -754,6 +754,7 @@ export const en: Translations = {
       missing: 'That plugin has no settings page. It may be disabled or uninstalled.'
     },
     nav: {
+      profile: 'Profile',
       providers: 'Providers',
       providerAccounts: 'Accounts',
       providerApiKeys: 'API keys',
@@ -772,6 +773,25 @@ export const en: Translations = {
       notifications: 'Notifications',
       vault: 'Passwords & Logins',
       plugins: 'Plugins'
+    },
+    identity: {
+      aiCollaborator: 'AI Collaborator',
+      nameLabel: 'AI Collaborator name',
+      namePlaceholder: 'Enter the name',
+      avatarAlt: 'Profile avatar',
+      uploadAvatar: 'Upload image',
+      uploading: 'Uploading…',
+      avatarUploadFailed: 'Could not upload avatar',
+      saveFailed: 'Could not save identity',
+      ownershipTitle: 'Ownership & Verification',
+      ownershipDesc: 'Verified owner details and organization identity for trust & compliance.',
+      verifiedOwner: 'Verified Owner',
+      unverifiedEmail: 'Unverified Email',
+      creatorName: 'Creator Name',
+      creatorEmail: 'Creator Email',
+      verified: 'Verified',
+      unverified: 'Unverified',
+      owner: 'Owner'
     },
     plugins: {
       title: 'Desktop plugins',

@@ -764,6 +764,7 @@ export const esOverrides = {
       missing: 'Este plugin no tiene página de ajustes. Puede que esté desactivado o desinstalado.'
     },
     nav: {
+      profile: 'Perfil',
       providers: 'Proveedores',
       providerAccounts: 'Cuentas',
       providerApiKeys: 'Claves API',
@@ -781,6 +782,26 @@ export const esOverrides = {
       billing: 'Facturación',
       notifications: 'Notificaciones',
       vault: 'Contraseñas e inicios de sesión'
+    },
+    identity: {
+      aiCollaborator: 'Colaborador de IA',
+      nameLabel: 'Nombre del colaborador de IA',
+      namePlaceholder: 'Introduce el nombre',
+      avatarAlt: 'Avatar del perfil',
+      uploadAvatar: 'Subir imagen',
+      uploading: 'Subiendo…',
+      avatarUploadFailed: 'No se pudo subir el avatar',
+      saveFailed: 'No se pudo guardar la identidad',
+      ownershipTitle: 'Propiedad y verificación',
+      ownershipDesc:
+        'Datos del propietario verificado e identidad de la organización para confianza y cumplimiento.',
+      verifiedOwner: 'Propietario verificado',
+      unverifiedEmail: 'Correo no verificado',
+      creatorName: 'Nombre del creador',
+      creatorEmail: 'Correo del creador',
+      verified: 'Verificado',
+      unverified: 'No verificado',
+      owner: 'Propietario'
     },
     plugins: {
       title: 'Plugins de escritorio',

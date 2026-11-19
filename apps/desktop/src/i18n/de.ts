@@ -760,6 +760,7 @@ export const deOverrides = {
       missing: 'Dieses Plugin hat keine Einstellungsseite. Es ist eventuell deaktiviert oder deinstalliert.'
     },
     nav: {
+      profile: 'Profil',
       providers: 'Anbieter',
       providerAccounts: 'Konten',
       providerApiKeys: 'API-Schlüssel',
@@ -777,6 +778,26 @@ export const deOverrides = {
       billing: 'Abrechnung',
       notifications: 'Benachrichtigungen',
       vault: 'Passwörter & Logins'
+    },
+    identity: {
+      aiCollaborator: 'KI-Mitarbeiter',
+      nameLabel: 'Name des KI-Mitarbeiters',
+      namePlaceholder: 'Namen eingeben',
+      avatarAlt: 'Profilavatar',
+      uploadAvatar: 'Bild hochladen',
+      uploading: 'Wird hochgeladen…',
+      avatarUploadFailed: 'Avatar konnte nicht hochgeladen werden',
+      saveFailed: 'Identität konnte nicht gespeichert werden',
+      ownershipTitle: 'Eigentum & Verifizierung',
+      ownershipDesc:
+        'Verifizierte Eigentümerdetails und Organisationsidentität für Vertrauen und Compliance.',
+      verifiedOwner: 'Verifizierter Eigentümer',
+      unverifiedEmail: 'Nicht verifizierte E-Mail',
+      creatorName: 'Name des Erstellers',
+      creatorEmail: 'E-Mail des Erstellers',
+      verified: 'Verifiziert',
+      unverified: 'Nicht verifiziert',
+      owner: 'Eigentümer'
     },
     plugins: {
       title: 'Desktop-Plugins',

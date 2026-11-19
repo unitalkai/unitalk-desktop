@@ -612,6 +612,7 @@ export interface Translations extends NoticeTranslations {
       pageCount: (n: number) => string
     }
     nav: {
+      profile: string
       providers: string
       providerAccounts: string
       providerApiKeys: string
@@ -630,6 +631,25 @@ export interface Translations extends NoticeTranslations {
       notifications: string
       vault: string
       plugins: string
+    }
+    identity: {
+      aiCollaborator: string
+      nameLabel: string
+      namePlaceholder: string
+      avatarAlt: string
+      uploadAvatar: string
+      uploading: string
+      avatarUploadFailed: string
+      saveFailed: string
+      ownershipTitle: string
+      ownershipDesc: string
+      verifiedOwner: string
+      unverifiedEmail: string
+      creatorName: string
+      creatorEmail: string
+      verified: string
+      unverified: string
+      owner: string
     }
     plugins: {
       title: string

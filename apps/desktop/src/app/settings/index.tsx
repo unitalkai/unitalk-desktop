@@ -24,6 +24,7 @@ import {
   Settings2,
   ShieldLock,
   Upload,
+  User,
   Wrench,
   Zap
 } from '@/lib/icons'
@@ -63,6 +64,8 @@ import {
   usePluginSettingsRoute
 } from './plugin-settings'
 import { SettingsBreadcrumbContext } from './primitives'
+import { SettingsIdentityHeader } from './profile-identity'
+import { ProfileSettings } from './profile-settings'
 import { PROVIDER_VIEWS, ProvidersSettings, type ProviderView } from './providers-settings'
 import { SessionsSettings } from './sessions-settings'
 import { SettingsSubpageHeader } from './subpage-navigation'
@@ -72,6 +75,7 @@ import { vaultOwnerKey, VaultSettings } from './vault-settings'
 import { useWebAccessAvailable, WebAccessSettings } from './web-access-settings'
 
 const SETTINGS_VIEWS: readonly SettingsViewId[] = [
+  'profile',
   ...SECTIONS.map(s => `config:${s.id}` as SettingsViewId),
   'providers',
   'gateway',
@@ -257,6 +261,13 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
     () =>
       (
         [
+          {
+            active: activeView === 'profile',
+            icon: User,
+            id: 'profile',
+            label: t.settings.nav.profile,
+            onSelect: () => setActiveView('profile')
+          },
           ...SECTIONS.flatMap(s => {
             const view = `config:${s.id}` as SettingsViewId
 
@@ -564,6 +575,8 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
 
   const activeSettingsContent = SubpageView ? (
     <SubpageView subpage={subpage} />
+  ) : activeView === 'profile' ? (
+    <ProfileSettings />
   ) : activeView.startsWith('config:') ? (
     <ConfigSettings
       activeSectionId={activeView.slice('config:'.length)}
@@ -604,7 +617,7 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
   return (
     <OverlayView closeLabel={t.settings.closeSettings} edgeBadge={searchPill} onClose={onClose}>
       <OverlaySplitLayout>
-        <OverlayNav footer={navFooter} groups={navGroups} />
+        <OverlayNav footer={navFooter} groups={navGroups} header={<SettingsIdentityHeader />} />
 
         <OverlayMain className="px-0 pb-0">
           <SettingsBreadcrumbContext.Provider value>

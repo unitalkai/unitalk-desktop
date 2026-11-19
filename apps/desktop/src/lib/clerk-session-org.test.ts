@@ -72,15 +72,34 @@ describe('Clerk organization summaries', () => {
         fullName: 'Ada Lovelace',
         id: 'user_1',
         imageUrl: 'https://example.test/ada.png',
-        primaryEmailAddress: { emailAddress: 'ada@example.test' },
+        primaryEmailAddress: {
+          emailAddress: 'ada@example.test',
+          verification: { status: 'verified' }
+        },
         username: 'ada'
       })
     ).toEqual({
       email: 'ada@example.test',
+      emailVerified: true,
       fullName: 'Ada Lovelace',
       id: 'user_1',
       imageUrl: 'https://example.test/ada.png',
       username: 'ada'
+    })
+  })
+
+  it('marks an unverified primary email as unverified', () => {
+    expect(
+      summarizeClerkUser({
+        id: 'user_2',
+        primaryEmailAddress: {
+          emailAddress: 'grace@example.test',
+          verification: { status: 'unverified' }
+        }
+      })
+    ).toMatchObject({
+      email: 'grace@example.test',
+      emailVerified: false
     })
   })
 })

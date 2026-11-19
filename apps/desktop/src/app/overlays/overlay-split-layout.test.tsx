@@ -75,3 +75,22 @@ it('fills only the current page when a third-level sub-page is open; its parent 
   expect(parent.className).toContain('bg-transparent')
   expect(parent.className).toContain('font-medium')
 })
+
+it('renders an optional identity header above the nav groups on the wide rail', () => {
+  const groups: OverlayNavGroup[] = [
+    {
+      active: true,
+      id: 'profile',
+      label: 'Profile',
+      icon: Settings2,
+      onSelect: vi.fn()
+    }
+  ]
+
+  const { container } = render(<OverlayNav groups={groups} header={<div>Identity</div>} />)
+  const rail = within(container.querySelector('[data-tour="overlay-nav"]') as HTMLElement)
+  const header = rail.getByText('Identity')
+  const navItem = rail.getByRole('button', { name: 'Profile' })
+
+  expect(header.compareDocumentPosition(navItem) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})

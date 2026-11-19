@@ -761,6 +761,7 @@ export const frOverrides = {
       missing: "Ce plugin n'a pas de page de réglages. Il est peut-être désactivé ou désinstallé."
     },
     nav: {
+      profile: 'Profil',
       providers: 'Fournisseurs',
       providerAccounts: 'Comptes',
       providerApiKeys: 'Clés API',
@@ -778,6 +779,26 @@ export const frOverrides = {
       billing: 'Facturation',
       notifications: 'Notifications',
       vault: 'Mots de passe et identifiants'
+    },
+    identity: {
+      aiCollaborator: 'Collaborateur IA',
+      nameLabel: 'Nom du collaborateur IA',
+      namePlaceholder: 'Saisissez le nom',
+      avatarAlt: 'Avatar du profil',
+      uploadAvatar: 'Importer une image',
+      uploading: 'Importation…',
+      avatarUploadFailed: "Impossible d'importer l'avatar",
+      saveFailed: "Impossible d'enregistrer l'identité",
+      ownershipTitle: 'Propriété & vérification',
+      ownershipDesc:
+        "Détails du propriétaire vérifié et identité de l'organisation pour la confiance et la conformité.",
+      verifiedOwner: 'Propriétaire vérifié',
+      unverifiedEmail: 'E-mail non vérifié',
+      creatorName: 'Nom du créateur',
+      creatorEmail: 'E-mail du créateur',
+      verified: 'Vérifié',
+      unverified: 'Non vérifié',
+      owner: 'Propriétaire'
     },
     plugins: {
       title: 'Plugins du desktop',
