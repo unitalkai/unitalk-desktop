@@ -30,7 +30,7 @@ import {
   useQueryClient,
   useValue
 } from '@hermes/plugin-sdk'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
 export const ID = 'pipedream-apps'
@@ -773,6 +773,35 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
   const [refreshing, setRefreshing] = useState(false)
   const [copied, setCopied] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  const tabRef = useRef(null)
+
+  const closeTab = useCallback(() => {
+    const tab = tabRef.current
+    tabRef.current = null
+    if (tab && !tab.closed) tab.close()
+  }, [])
+
+  const openConnectTab = useCallback(
+    url => {
+      closeTab()
+
+      // Only the browser-hosted desktop can close the tab it opened. Electron
+      // hands the link to the system browser, which the app cannot reach.
+      if (document.documentElement.dataset.hermesDesktopHost === 'browser') {
+        const tab = window.open(url, '_blank')
+        if (tab) {
+          tab.opener = null
+          tabRef.current = tab
+          return
+        }
+      }
+
+      void openExternal(url)
+    },
+    [closeTab, openExternal]
+  )
+
+  useEffect(() => () => closeTab(), [closeTab])
 
   useEffect(() => {
     if (!slug) {
@@ -784,6 +813,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
 
     let disposed = false
 
+    closeTab()
     setStatus('starting')
     setFailureKind('connect')
     setError('')
@@ -797,7 +827,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
         setLink(result.connectLinkUrl)
         setDeadline(Date.now() + CONNECT_TIMEOUT_MS)
         setStatus('waiting')
-        void openExternal(result.connectLinkUrl)
+        openConnectTab(result.connectLinkUrl)
       } catch (nextError) {
         if (disposed) return
         setFailureKind('connect')
@@ -809,13 +839,14 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
     return () => {
       disposed = true
     }
-  }, [api, attempt, externalUserId, openExternal, slug, t])
+  }, [api, attempt, closeTab, externalUserId, openConnectTab, slug, t])
 
   const checkAccounts = useCallback(async () => {
     try {
       const accounts = await api.accounts(externalUserId)
       const match = accounts.find(account => accountSlugOf(account) === slug)
       if (match) {
+        closeTab()
         onConnected(slug, name)
         return true
       }
@@ -823,7 +854,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
     } catch {
       return false
     }
-  }, [api, externalUserId, name, onConnected, slug])
+  }, [api, closeTab, externalUserId, name, onConnected, slug])
 
   useEffect(() => {
     if (status !== 'waiting' || !deadline) return undefined
@@ -909,7 +940,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
                   children: [
                     link
                       ? jsx(Button, {
-                          onClick: () => void openExternal(link),
+                          onClick: () => openConnectTab(link),
                           size: 'sm',
                           type: 'button',
                           variant: 'outline',
@@ -949,7 +980,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
                   children: [
                     link
                       ? jsx(Button, {
-                          onClick: () => void openExternal(link),
+                          onClick: () => openConnectTab(link),
                           size: 'sm',
                           type: 'button',
                           variant: 'outline',
