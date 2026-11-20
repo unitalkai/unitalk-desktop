@@ -1,7 +1,5 @@
 import { atom, type ReadableAtom } from 'nanostores'
 
-import { getClerkSessionToken } from '@/lib/clerk-session'
-
 export type ClerkSessionStatus = 'disabled' | 'error' | 'loading' | 'signed-in' | 'signed-out'
 
 export interface ClerkUserSummary {
@@ -99,9 +97,6 @@ export function patchClerkSession(patch: Partial<ClerkSessionSnapshot>): void {
 
 export const clerkSessionHost = {
   snapshot: $clerkSession as ReadableAtom<ClerkSessionSnapshot>,
-  /** Fresh Clerk session JWT for the active user/organization. Short-lived;
-   *  rejects while the renderer's Clerk client is not ready. */
-  getToken: async (): Promise<null | string> => getClerkSessionToken(),
   signIn: async (): Promise<void> => {
     if (!currentSignInAction) {
       throw new Error('Clerk sign-in is not available')
@@ -117,7 +112,6 @@ export const clerkSessionHost = {
   signOut: async (): Promise<void> => requireClerkSessionActions().signOut()
 } satisfies {
   snapshot: ReadableAtom<ClerkSessionSnapshot>
-  getToken: () => Promise<null | string>
   signIn: () => Promise<void>
   setActiveOrganization: (organizationId: null | string) => Promise<void>
   createOrganization: (input: ClerkOrganizationInput) => Promise<ClerkOrganizationSummary>
