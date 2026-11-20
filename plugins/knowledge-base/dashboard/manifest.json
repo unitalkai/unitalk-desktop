@@ -1,0 +1,11 @@
+{
+  "name": "knowledge-base",
+  "label": "Knowledge Base",
+  "description": "Qdrant knowledge bases backend for the Settings knowledge base menu.",
+  "icon": "Database",
+  "version": "0.1.0",
+  "tab": {
+    "hidden": true
+  },
+  "api": "plugin_api.py"
+}
