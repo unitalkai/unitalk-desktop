@@ -67,7 +67,9 @@ The renderer owns the live Clerk client, so organization operations stay in
 needed, and plugins never import Clerk React hooks or components.
 
 `host.clerk.snapshot` exposes a sanitized user, the active organization, and
-the user's organization memberships. `setActiveOrganization(orgId | null)`
+the user's organization memberships. `host.clerk.getToken()` returns a fresh,
+short-lived Clerk session JWT for the active user/organization (it rejects
+until the renderer's Clerk client is ready). `setActiveOrganization(orgId | null)`
 uses `clerk.setActive`, forces a fresh token with
 `getToken({ skipCache: true })`, and re-submits that token through the existing
 `submitClerkToken` path. Passing `null` selects the personal account.
@@ -77,6 +79,11 @@ each other open window calls `setActive` for the same organization, refreshes
 its token, and re-submits it for its own active profile. Token submission is
 best-effort: the organization switch still succeeds and the snapshot records
 `tokenSyncError` so the user can retry.
+
+The User Panel's AI Credits readout calls the Unitalk LiteLLM gateway's
+`/team/info` with that token, so the gateway must have JWT auth enabled
+(`general_settings.enable_jwt_auth`) and trust the same Clerk instance
+(`JWT_PUBLIC_KEY_URL` / `JWT_ISSUER`).
 
 The standalone User Panel plugin lives in
 `desktop-plugins/user-panel/plugin.js`. Copy that folder to

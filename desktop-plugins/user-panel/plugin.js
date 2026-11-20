@@ -47,8 +47,26 @@ const PRESET_AMOUNTS = [5, 10, 25, 50, 100, 250]
 const CREDITS_FORMAT = new Intl.NumberFormat('de-DE')
 const EURO_FORMAT = new Intl.NumberFormat('de-DE', { currency: 'EUR', style: 'currency' })
 
+const TEAM_INFO_URL = 'https://llmgateway.unitalk.ai/team/info'
+const CREDITS_PER_DOLLAR = 1000
+const CREDITS_REFRESH_MS = 60_000
+const TEAM_CREDITS_FORMAT = new Intl.NumberFormat('fr-FR')
+const teamCreditsCache = new Map()
+const teamCreditsInflight = new Map()
+
 const formatCredits = amount => CREDITS_FORMAT.format(amount * CREDITS_PER_EURO)
 const formatEuro = amount => EURO_FORMAT.format(amount)
+
+const teamCreditsOf = team => {
+  const maxBudget = Number(team?.max_budget ?? team?.maxBudgetUsd ?? 0)
+  const spend = Number(team?.spend ?? team?.spendUsd ?? 0)
+
+  if (!Number.isFinite(maxBudget) || !Number.isFinite(spend)) {
+    return 0
+  }
+
+  return Math.max(0, Math.floor((maxBudget - spend) * CREDITS_PER_DOLLAR))
+}
 
 const clampAmount = value => {
   const parsed = Number(value)
@@ -108,25 +126,110 @@ function MenuActionRow({ icon, label, onSelect, trailing }) {
   })
 }
 
-/*
-function AiCreditsValue() {
-  return jsxs('span', {
-    className: 'flex shrink-0 items-center gap-2',
-    children: [
-      jsx('span', {
-        className: 'grid size-4 place-items-center rounded-full text-white',
-        style: { backgroundColor: CREDITS_PURPLE },
-        children: jsx(Codicon, { name: 'zap', size: '0.6rem' })
-      }),
-      jsx('span', {
-        className: 'text-xs font-semibold tabular-nums',
-        style: { color: CREDITS_PURPLE },
-        children: '3379353'
-      })
-    ]
+function AiCreditsValue({ credits }) {
+  return jsx('span', {
+    className: 'ml-auto shrink-0 text-xs font-semibold tabular-nums text-(--ui-purple)',
+    children: TEAM_CREDITS_FORMAT.format(credits)
   })
 }
-*/
+
+async function loadTeamCredits(organizationId) {
+  const token = await host.clerk.getToken()
+
+  if (!token) {
+    return null
+  }
+
+  const response = await fetch(`${TEAM_INFO_URL}?team_id=${encodeURIComponent(organizationId)}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+
+  if (response.status === 404) {
+    teamCreditsCache.set(organizationId, { credits: 0, fetchedAt: Date.now() })
+
+    return 0
+  }
+
+  if (!response.ok) {
+    return null
+  }
+
+  const data = await response.json()
+  const next = teamCreditsOf(data?.team_info ?? data)
+
+  teamCreditsCache.set(organizationId, { credits: next, fetchedAt: Date.now() })
+
+  return next
+}
+
+function useTeamCredits({ menuOpen, organizationId, signedIn }) {
+  const [credits, setCredits] = useState(0)
+
+  useEffect(() => {
+    if (!signedIn) {
+      setCredits(0)
+
+      return
+    }
+
+    if (!organizationId) {
+      setCredits(0)
+
+      return
+    }
+
+    const cached = teamCreditsCache.get(organizationId)
+
+    if (cached) {
+      setCredits(cached.credits)
+    }
+
+    if (cached && Date.now() - cached.fetchedAt < CREDITS_REFRESH_MS) {
+      return
+    }
+
+    if (!menuOpen && cached) {
+      return
+    }
+
+    if (typeof host.clerk.getToken !== 'function') {
+      setCredits(cached?.credits ?? 0)
+
+      return
+    }
+
+    let cancelled = false
+    let request = teamCreditsInflight.get(organizationId)
+
+    if (!request) {
+      request = loadTeamCredits(organizationId)
+      teamCreditsInflight.set(organizationId, request)
+      request.catch(() => undefined).finally(() => {
+        if (teamCreditsInflight.get(organizationId) === request) {
+          teamCreditsInflight.delete(organizationId)
+        }
+      })
+    }
+
+    request
+      .then(next => {
+        if (!cancelled) {
+          setCredits(next === null ? (cached?.credits ?? 0) : next)
+        }
+      })
+      .catch(() => {
+        if (!cancelled && !cached) {
+          setCredits(0)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [menuOpen, organizationId, signedIn])
+
+  return credits
+}
 
 function CreateOrganizationDialog({ onOpenChange, open }) {
   const [name, setName] = useState('')
@@ -378,6 +481,9 @@ function UserPanelContent({ onOpenUrl }) {
   const [organizationError, setOrganizationError] = useState(null)
   const [signingOut, setSigningOut] = useState(false)
   const [retryingSync, setRetryingSync] = useState(false)
+  const signedIn = snapshot.enabled && snapshot.status === 'signed-in' && Boolean(snapshot.user)
+  const organizationId = signedIn ? (snapshot.activeOrganization?.id ?? null) : null
+  const teamCredits = useTeamCredits({ menuOpen, organizationId, signedIn })
 
   if (!snapshot.enabled || snapshot.status === 'disabled' || snapshot.status === 'signed-out') {
     return null
@@ -605,8 +711,9 @@ function UserPanelContent({ onOpenUrl }) {
                 icon: jsx(Codicon, { className: ICON, name: 'zap', size: '0.875rem' }),
                 key: 'ai-credits',
                 label: 'AI Credits',
-                onSelect: () => openLink(LINK_URLS.aiCredits)
-                /* trailing: jsx(AiCreditsValue, {}) */
+                onSelect: () => openLink(LINK_URLS.aiCredits),
+                trailing:
+                  teamCredits === null || teamCredits === undefined ? null : jsx(AiCreditsValue, { credits: teamCredits })
               }),
               jsx(MenuActionRow, {
                 icon: jsx(Codicon, { className: ICON, name: 'credit-card', size: '0.875rem' }),

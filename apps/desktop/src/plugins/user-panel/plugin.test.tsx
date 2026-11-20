@@ -8,6 +8,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import plugin from './plugin.js'
 
 const mocks = vi.hoisted(() => ({
+  fetch: vi.fn(),
+  getToken: vi.fn(),
   notifyError: vi.fn(),
   signIn: vi.fn(),
   signOut: vi.fn(),
@@ -33,6 +35,7 @@ vi.mock('@hermes/plugin-sdk', async importOriginal => {
       ...sdk.host,
       clerk: {
         createOrganization: vi.fn(),
+        getToken: mocks.getToken,
         refresh: vi.fn(),
         setActiveOrganization: vi.fn(),
         signIn: mocks.signIn,
@@ -95,13 +98,22 @@ beforeAll(() => {
   mount = () => renderPanel!()
 })
 
+const creditsResponse = (body: unknown) =>
+  Promise.resolve({ json: async () => body, ok: true } as unknown as Response)
+
 beforeEach(() => {
+  mocks.fetch.mockReset().mockImplementation(() => creditsResponse({ max_budget: 0, spend: 0 }))
+  mocks.getToken.mockReset().mockResolvedValue('clerk-token')
   mocks.signIn.mockReset().mockResolvedValue(undefined)
   mocks.signOut.mockReset().mockResolvedValue(undefined)
   mocks.notifyError.mockReset()
+  vi.stubGlobal('fetch', mocks.fetch)
 })
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 
 const openMenu = (name: RegExp = /Open account menu/) => {
   const trigger = screen.getByRole('button', { name })
@@ -125,7 +137,8 @@ const selectRow = (name: string) => {
   return row
 }
 
-const menuLabels = () => screen.getAllByRole('menuitem').map(item => item.textContent?.trim())
+const menuLabels = () =>
+  screen.getAllByRole('menuitem').map(item => item.querySelector('span.flex-1')?.textContent?.trim())
 
 const PUBLIC_ROWS = ['Settings', 'AI Credits', 'Buy credits', 'Pricing', 'Book a demo']
 
@@ -177,5 +190,133 @@ describe('user panel menu', () => {
     selectRow('Log out')
 
     await waitFor(() => expect(mocks.signOut).toHaveBeenCalledTimes(1))
+  })
+
+  it('shows the remaining team credits beside AI Credits', async () => {
+    const paidOrganization = { ...organization, id: 'org_paid', name: 'Paid Org' }
+
+    mocks.fetch.mockImplementation(() => creditsResponse({ max_budget: 10, spend: 3.5 }))
+    setSnapshot({
+      activeOrganization: paidOrganization,
+      organizations: [paidOrganization],
+      status: 'signed-in',
+      user
+    })
+
+    render(mount())
+    openMenu(/Open account menu for Paid Org/)
+
+    const credits = screen.getByRole('menuitem', { name: /AI Credits/ })
+
+    await waitFor(() => expect(credits.textContent?.replace(/\s/g, '')).toContain('6500'))
+    expect(mocks.fetch).toHaveBeenCalledWith('https://llmgateway.unitalk.ai/team/info?team_id=org_paid', {
+      headers: { Authorization: 'Bearer clerk-token' }
+    })
+  })
+
+  it('shows zero credits on a personal account without querying the gateway', async () => {
+    setSnapshot({ activeOrganization: null, organizations: [], status: 'signed-in', user })
+
+    render(mount())
+    openMenu()
+
+    await waitFor(() => expect(screen.getByText('0')).toBeTruthy())
+    expect(mocks.fetch).not.toHaveBeenCalled()
+  })
+
+  it('shows zero credits when the credits request fails', async () => {
+    const failedOrganization = { ...organization, id: 'org_fail', name: 'Fail Org' }
+
+    mocks.fetch.mockImplementation(() => Promise.reject(new Error('offline')))
+    setSnapshot({
+      activeOrganization: failedOrganization,
+      organizations: [failedOrganization],
+      status: 'signed-in',
+      user
+    })
+
+    render(mount())
+    openMenu(/Open account menu for Fail Org/)
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('menuitem', { name: /AI Credits/ }).querySelector('span.ml-auto')?.textContent
+      ).toBe('0')
+    )
+    expect(mocks.fetch).toHaveBeenCalledTimes(1)
+    expect(mocks.notifyError).not.toHaveBeenCalled()
+  })
+
+  it('shows zero credits when the gateway rejects the token', async () => {
+    const unauthorizedOrganization = { ...organization, id: 'org_unauthorized', name: 'Unauthorized Org' }
+
+    mocks.fetch.mockImplementation(() => Promise.resolve({ ok: false, status: 401 } as unknown as Response))
+    setSnapshot({
+      activeOrganization: unauthorizedOrganization,
+      organizations: [unauthorizedOrganization],
+      status: 'signed-in',
+      user
+    })
+
+    render(mount())
+    openMenu(/Open account menu for Unauthorized Org/)
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('menuitem', { name: /AI Credits/ }).querySelector('span.ml-auto')?.textContent
+      ).toBe('0')
+    )
+  })
+
+  it('shows zero credits when the organization has no gateway team', async () => {
+    const organizationWithoutTeam = { ...organization, id: 'org_no_team', name: 'No Team Org' }
+
+    mocks.fetch.mockImplementation(() => Promise.resolve({ ok: false, status: 404 } as unknown as Response))
+    setSnapshot({
+      activeOrganization: organizationWithoutTeam,
+      organizations: [organizationWithoutTeam],
+      status: 'signed-in',
+      user
+    })
+
+    render(mount())
+    openMenu(/Open account menu for No Team Org/)
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('menuitem', { name: /AI Credits/ }).querySelector('span.ml-auto')?.textContent
+      ).toBe('0')
+    )
+  })
+
+  it('reuses fresh team credits instead of refetching on remount', async () => {
+    const cachedOrganization = { ...organization, id: 'org_cache', name: 'Cache Org' }
+
+    mocks.fetch.mockImplementation(() => creditsResponse({ max_budget: 20, spend: 5 }))
+    setSnapshot({
+      activeOrganization: cachedOrganization,
+      organizations: [cachedOrganization],
+      status: 'signed-in',
+      user
+    })
+
+    const first = render(mount())
+
+    openMenu(/Open account menu for Cache Org/)
+
+    await waitFor(() =>
+      expect(screen.getByRole('menuitem', { name: /AI Credits/ }).textContent?.replace(/\s/g, '')).toContain('15000')
+    )
+    expect(mocks.fetch).toHaveBeenCalledTimes(1)
+
+    first.unmount()
+
+    render(mount())
+    openMenu(/Open account menu for Cache Org/)
+
+    await waitFor(() =>
+      expect(screen.getByRole('menuitem', { name: /AI Credits/ }).textContent?.replace(/\s/g, '')).toContain('15000')
+    )
+    expect(mocks.fetch).toHaveBeenCalledTimes(1)
   })
 })
