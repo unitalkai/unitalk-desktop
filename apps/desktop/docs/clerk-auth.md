@@ -130,10 +130,21 @@ The renderer owns the live Clerk client, so organization operations stay in
 needed, and plugins never import Clerk React hooks or components.
 
 `host.clerk.snapshot` exposes a sanitized user, the active organization, and
-the user's organization memberships. `setActiveOrganization(orgId | null)`
+the user's organization memberships. `host.clerk.getToken()` returns a fresh,
+short-lived Clerk session JWT for the active user/organization (it rejects
+until the renderer's Clerk client is ready). `setActiveOrganization(orgId | null)`
 uses `clerk.setActive`, forces a fresh token with
 `getToken({ skipCache: true })`, and re-submits that token through the existing
 `submitClerkToken` path. Passing `null` selects the personal account.
+
+The User Panel's AI Credits readout asks Hermes Web for the active team's
+remaining credits (`GET https://agent.unitalk.ai/api/team`) with that token as
+`Authorization: Bearer …`. Hermes Web verifies the Clerk JWT, calls the Unitalk
+LiteLLM gateway with its own server key, and returns the computed `credits`, so
+the gateway key never reaches the Desktop. The Web endpoint must accept bearer
+session tokens (Clerk's `auth({ acceptsToken: 'session_token' })`) and allow the
+Desktop renderer's cross-origin request. Both apps must use the same Clerk
+instance.
 
 The initiating window announces the switch over `window.hermesDesktop.windowRelay`;
 each other open window calls `setActive` for the same organization, refreshes

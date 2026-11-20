@@ -44,7 +44,8 @@ function dispatchPipedreamMessage(
 afterEach(() => {
   cleanup()
   queryClient.clear()
-  vi.clearAllMocks()
+  vi.restoreAllMocks()
+  delete window.document.documentElement.dataset.hermesDesktopHost
 })
 
 afterAll(() => {
@@ -97,7 +98,7 @@ describe('pipedream apps runtime plugin', () => {
     expect(calls[4]).toEqual(['/mcp/enable', { method: 'POST', body: { externalUserId: 'u1', appSlug: 'slack' } }])
   })
 
-  it('opens the Connect Link and enables MCP once the account appears', async () => {
+  it('opens the Connect Link in a tab and closes it once the account appears', async () => {
     let connected = false
 
     const api = {
@@ -129,6 +130,9 @@ describe('pipedream apps runtime plugin', () => {
 
     const toast = toastSpy()
     const openExternal = vi.fn().mockResolvedValue(true)
+    const tab = { close: vi.fn(), closed: false }
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window)
+    window.document.documentElement.dataset.hermesDesktopHost = 'browser'
 
     renderWithQuery(
       <plugin.PipedreamAppsTab
@@ -144,17 +148,97 @@ describe('pipedream apps runtime plugin', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Connect' }))
 
     await waitFor(() =>
-      expect(openExternal).toHaveBeenCalledWith('https://pipedream.com/connect?token=ctok_1')
+      expect(open).toHaveBeenCalledWith('https://pipedream.com/connect?token=ctok_1', '_blank')
     )
+    expect(openExternal).not.toHaveBeenCalled()
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith(
         'Connector connected',
         'Connected successfully. Tools will be available in a new chat.'
       )
     )
+    expect(tab.close).toHaveBeenCalled()
     await waitFor(() =>
       expect(api.mcpEnable).toHaveBeenCalledWith({ externalUserId: 'user-1', appSlug: 'slack' })
     )
+  })
+
+  it('falls back to the external opener outside the browser-hosted app', async () => {
+    const api = {
+      config: vi.fn().mockResolvedValue({ configured: true, environment: 'production', mcpBaseUrl: null }),
+      categories: vi.fn().mockResolvedValue({ categories: [] }),
+      apps: vi.fn().mockResolvedValue({
+        apps: [{ name_slug: 'slack', name: 'Slack' }],
+        nextCursor: null,
+        prevCursor: null,
+        totalCount: 1
+      }),
+      accounts: vi.fn().mockResolvedValue([]),
+      connect: vi.fn().mockResolvedValue({
+        connectLinkUrl: 'https://pipedream.com/connect?token=ctok_1'
+      }),
+      disconnect: vi.fn(),
+      mcpEnable: vi.fn()
+    }
+
+    const openExternal = vi.fn().mockResolvedValue(true)
+    const open = vi.spyOn(window, 'open')
+
+    renderWithQuery(
+      <plugin.PipedreamAppsTab
+        api={api}
+        copyText={vi.fn()}
+        fallbackExternalUserId="user-1"
+        openExternal={openExternal}
+        toast={toastSpy()}
+      />
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Connect' }))
+
+    await waitFor(() =>
+      expect(openExternal).toHaveBeenCalledWith('https://pipedream.com/connect?token=ctok_1')
+    )
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  it('closes the opened tab when the dialog is cancelled', async () => {
+    const api = {
+      config: vi.fn().mockResolvedValue({ configured: true, environment: 'production', mcpBaseUrl: null }),
+      categories: vi.fn().mockResolvedValue({ categories: [] }),
+      apps: vi.fn().mockResolvedValue({
+        apps: [{ name_slug: 'slack', name: 'Slack' }],
+        nextCursor: null,
+        prevCursor: null,
+        totalCount: 1
+      }),
+      accounts: vi.fn().mockResolvedValue([]),
+      connect: vi.fn().mockResolvedValue({
+        connectLinkUrl: 'https://pipedream.com/connect?token=ctok_1'
+      }),
+      disconnect: vi.fn(),
+      mcpEnable: vi.fn()
+    }
+
+    const tab = { close: vi.fn(), closed: false }
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window)
+    window.document.documentElement.dataset.hermesDesktopHost = 'browser'
+
+    renderWithQuery(
+      <plugin.PipedreamAppsTab
+        api={api}
+        copyText={vi.fn()}
+        fallbackExternalUserId="user-1"
+        openExternal={vi.fn()}
+        toast={toastSpy()}
+      />
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Connect' }))
+    await waitFor(() => expect(open).toHaveBeenCalled())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(tab.close).toHaveBeenCalled())
   })
 
   it('warns when MCP enable fails after the app connects', async () => {
