@@ -80,6 +80,7 @@ export const LOCALES = {
     appConnected: 'Connector connected',
     appConnectedMessage: () => 'Connected successfully. Tools will be available in a new chat.',
     connectFailedTitle: name => `Could not connect ${name}`,
+    connectCancelled: 'The connection was not completed. You can try again.',
     missingApp: 'This connector is missing a name slug.',
     disconnectTitle: name => `Disconnect ${name}?`,
     disconnectBody: 'The agent will lose access to this account. You can reconnect it later.',
@@ -200,6 +201,37 @@ export function errorMessage(error) {
   return 'Something went wrong.'
 }
 
+const PIPEDREAM_ORIGINS = new Set(['https://pipedream.com', 'https://www.pipedream.com'])
+const PIPEDREAM_CLOSE_CONFIRM_MS = 1500
+
+export function pipedreamEmbedUrl(slug, result) {
+  if (typeof result?.token === 'string' && result.token) {
+    return `https://pipedream.com/_static/connect.html?token=${encodeURIComponent(result.token)}&app=${encodeURIComponent(slug)}`
+  }
+  return typeof result?.connectLinkUrl === 'string' ? result.connectLinkUrl : ''
+}
+
+export function pipedreamMessage(event, frame) {
+  if (!PIPEDREAM_ORIGINS.has(event.origin)) return null
+  if (!frame || event.source !== frame.contentWindow) return null
+
+  const data = event.data
+  if (!data || typeof data !== 'object' || typeof data.type !== 'string') return null
+
+  if (data.type === 'success') {
+    return typeof data.authProvisionId === 'string' && data.authProvisionId
+      ? { type: 'success', authProvisionId: data.authProvisionId }
+      : null
+  }
+
+  if (data.type === 'error') {
+    return { type: 'error', message: typeof data.message === 'string' ? data.message : '' }
+  }
+
+  if (data.type === 'close') return { type: 'close' }
+  return null
+}
+
 export function appsTabHashFor(hash) {
   return String(hash).replace(/([?&])tab=connectors(?=&|$)/, (_, prefix) => `${prefix}tab=${ID}:apps`)
 }
@@ -218,8 +250,7 @@ export function createPipedreamApi(rest) {
       const query = params.toString()
       return rest(`/apps${query ? `?${query}` : ''}`)
     },
-    connect: ({ externalUserId, appSlug }) =>
-      rest('/connect', { method: 'POST', body: { externalUserId, appSlug } }),
+    connect: ({ externalUserId, appSlug }) => rest('/connect', { method: 'POST', body: { externalUserId, appSlug } }),
     accounts: externalUserId => rest(`/accounts?externalUserId=${encodeURIComponent(externalUserId)}`),
     disconnect: ({ externalUserId, accountId }) =>
       rest(`/accounts/${encodeURIComponent(accountId)}?externalUserId=${encodeURIComponent(externalUserId)}`, {
@@ -331,20 +362,21 @@ function AppCard({ app, connected, onOpen, onConnect }) {
 }
 
 function SkeletonCard({ index }) {
-  return jsxs('div', {
-    className: 'pd-skeleton',
-    children: [
-      jsx(Skeleton, { className: 'h-9 w-9 rounded-[9px]' }),
-      jsxs('div', {
-        className: 'pd-skeleton-copy',
-        children: [
-          jsx(Skeleton, { className: 'h-2.5 w-40' }),
-          jsx(Skeleton, { className: 'h-2 w-full' })
-        ]
-      }),
-      jsx(Skeleton, { className: 'h-7 w-20' })
-    ]
-  }, index)
+  return jsxs(
+    'div',
+    {
+      className: 'pd-skeleton',
+      children: [
+        jsx(Skeleton, { className: 'h-9 w-9 rounded-[9px]' }),
+        jsxs('div', {
+          className: 'pd-skeleton-copy',
+          children: [jsx(Skeleton, { className: 'h-2.5 w-40' }), jsx(Skeleton, { className: 'h-2 w-full' })]
+        }),
+        jsx(Skeleton, { className: 'h-7 w-20' })
+      ]
+    },
+    index
+  )
 }
 
 function matchesQuery(value, query) {
@@ -353,10 +385,7 @@ function matchesQuery(value, query) {
 }
 
 function accountMatches(account, query) {
-  return (
-    matchesQuery(appNameOf(account?.app) || '', query) ||
-    matchesQuery(appSlugOf(account?.app) || '', query)
-  )
+  return matchesQuery(appNameOf(account?.app) || '', query) || matchesQuery(appSlugOf(account?.app) || '', query)
 }
 
 function SectionHeading({ count, title }) {
@@ -427,14 +456,8 @@ export function AppsDirectory({
   const page = history.length + 1
   const showPager = Boolean(data.nextCursor) || history.length > 0
 
-  const connectedAccounts = useMemo(
-    () => accounts.filter(account => accountMatches(account, query)),
-    [accounts, query]
-  )
-  const availableApps = useMemo(
-    () => apps.filter(app => !connectedSlugs.has(appSlugOf(app))),
-    [apps, connectedSlugs]
-  )
+  const connectedAccounts = useMemo(() => accounts.filter(account => accountMatches(account, query)), [accounts, query])
+  const availableApps = useMemo(() => apps.filter(app => !connectedSlugs.has(appSlugOf(app))), [apps, connectedSlugs])
   const availableCount = Math.max(
     0,
     (data.totalCount || 0) - new Set(connectedAccounts.map(accountSlugOf).filter(Boolean)).size
@@ -516,12 +539,16 @@ export function AppsDirectory({
           : jsx('div', {
               className: 'pd-grid',
               children: availableApps.map(app =>
-                jsx(AppCard, {
-                  app,
-                  connected: false,
-                  onConnect: () => onConnect(app),
-                  onOpen: () => onOpen(app)
-                }, app.name_slug || app.id || app.name)
+                jsx(
+                  AppCard,
+                  {
+                    app,
+                    connected: false,
+                    onConnect: () => onConnect(app),
+                    onOpen: () => onOpen(app)
+                  },
+                  app.name_slug || app.id || app.name
+                )
               )
             })
 
@@ -554,9 +581,7 @@ export function AppsDirectory({
                     jsxs(SelectContent, {
                       children: [
                         jsx(SelectItem, { value: ALL_CATEGORIES, children: t('allCategories') }),
-                        ...categories.map(item =>
-                          jsx(SelectItem, { value: item.id, children: item.name }, item.id)
-                        )
+                        ...categories.map(item => jsx(SelectItem, { value: item.id, children: item.name }, item.id))
                       ]
                     })
                   ]
@@ -663,7 +688,11 @@ function AccountRow({ account, onReconnect, onDisconnect }) {
             className: 'pd-card-title',
             children: [
               jsx('span', { className: 'pd-account-name', children: name }),
-              jsx(Badge, { size: 'xs', variant: tone === 'ok' ? 'success' : tone === 'warn' ? 'warn' : 'destructive', children: stateLabel })
+              jsx(Badge, {
+                size: 'xs',
+                variant: tone === 'ok' ? 'success' : tone === 'warn' ? 'warn' : 'destructive',
+                children: stateLabel
+              })
             ]
           }),
           subtitle ? jsx('div', { className: 'pd-account-sub', children: subtitle }) : null,
@@ -719,10 +748,7 @@ export function AppDetailsDialog({ app, connected, onClose, onConnect }) {
           children: [
             jsxs('div', {
               className: 'pd-dialog-head',
-              children: [
-                jsx(AppLogo, { app }),
-                jsx('span', { className: 'pd-dialog-name', children: appNameOf(app) })
-              ]
+              children: [jsx(AppLogo, { app }), jsx('span', { className: 'pd-dialog-name', children: appNameOf(app) })]
             }),
             app?.description ? jsx('p', { className: 'pd-dialog-desc', children: app.description }) : null,
             jsxs('div', {
@@ -761,7 +787,7 @@ export function AppDetailsDialog({ app, connected, onClose, onConnect }) {
   })
 }
 
-export function ConnectDialog({ app, api, externalUserId, openExternal, copyText, onClose, onConnected }) {
+export function ConnectDialog({ app, api, externalUserId, openExternal, browser, copyText, onClose, onConnected }) {
   const t = usePluginI18n(ID)
   const slug = appSlugOf(app)
   const name = appNameOf(app)
@@ -818,6 +844,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
     setFailureKind('connect')
     setError('')
     setLink('')
+    setEmbedUrl('')
     setDeadline(0)
 
     void (async () => {
@@ -883,6 +910,59 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
   }, [checkAccounts, deadline, status, t])
 
   useEffect(() => {
+    if (!embedUrl) return undefined
+
+    const iframe = document.createElement('iframe')
+    iframe.src = embedUrl
+    iframe.title = 'Pipedream Connect'
+    iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:2147483647;background:#fff'
+    iframeRef.current = iframe
+    document.body.append(iframe)
+
+    const onMessage = event => {
+      const message = pipedreamMessage(event, iframe)
+      if (!message) return
+
+      if (message.type === 'success') {
+        setEmbedUrl('')
+        succeed()
+        return
+      }
+
+      if (message.type === 'error') {
+        setEmbedUrl('')
+        setFailureKind('connect')
+        setError(message.message || t('connectFailedTitle', name))
+        setStatus('error')
+        return
+      }
+
+      // The Pipedream page was closed. The account may have been created just
+      // before the close message, so wait for the account list before calling
+      // this a cancellation.
+      setEmbedUrl('')
+      void (async () => {
+        if (await checkAccounts()) return
+        await new Promise(resolve => window.setTimeout(resolve, PIPEDREAM_CLOSE_CONFIRM_MS))
+        if (!mountedRef.current || settledRef.current) return
+        if (await checkAccounts()) return
+        if (!mountedRef.current || settledRef.current) return
+        setFailureKind('connect')
+        setError(t('connectCancelled'))
+        setStatus('error')
+      })()
+    }
+
+    window.addEventListener('message', onMessage)
+
+    return () => {
+      window.removeEventListener('message', onMessage)
+      iframe.remove()
+      if (iframeRef.current === iframe) iframeRef.current = null
+    }
+  }, [checkAccounts, embedUrl, name, succeed, t])
+
+  useEffect(() => {
     if (!copied) return undefined
     const timer = window.setTimeout(() => setCopied(false), 1500)
     return () => window.clearTimeout(timer)
@@ -921,7 +1001,10 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
         status === 'starting'
           ? jsxs('div', {
               className: 'pd-wait',
-              children: [jsx(GlyphSpinner, { ariaLabel: t('preparing') }), jsx('span', { className: 'pd-wait-copy', children: t('preparing') })]
+              children: [
+                jsx(GlyphSpinner, { ariaLabel: t('preparing') }),
+                jsx('span', { className: 'pd-wait-copy', children: t('preparing') })
+              ]
             })
           : status === 'waiting'
             ? jsxs('div', {
@@ -1013,7 +1096,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
   })
 }
 
-export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, copyText, toast }) {
+export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, browser, copyText, toast }) {
   const t = usePluginI18n(ID)
   const externalUserId = useExternalUserId(fallbackExternalUserId)
   const queryClient = useQueryClient()
@@ -1144,6 +1227,7 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
         ? jsx(ConnectDialog, {
             api,
             app: connectTarget,
+            browser,
             copyText,
             externalUserId,
             onClose: () => setConnectTarget(null),
@@ -1160,10 +1244,16 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
           if (!disconnectTarget) return
           await api.disconnect({ accountId: disconnectTarget.id, externalUserId })
           await refreshAccounts()
-          toast.success(t('appDisconnected'), appNameOf(disconnectTarget.app) || accountSubtitle(disconnectTarget) || t('unknownApp'))
+          toast.success(
+            t('appDisconnected'),
+            appNameOf(disconnectTarget.app) || accountSubtitle(disconnectTarget) || t('unknownApp')
+          )
         },
         open: disconnectTarget !== null,
-        title: t('disconnectTitle', appNameOf(disconnectTarget?.app) || accountSubtitle(disconnectTarget) || t('unknownApp'))
+        title: t(
+          'disconnectTitle',
+          appNameOf(disconnectTarget?.app) || accountSubtitle(disconnectTarget) || t('unknownApp')
+        )
       })
     ]
   })
@@ -1198,6 +1288,7 @@ export default {
     if (!hasStored) ctx.storage.set('externalUserId', fallbackExternalUserId)
 
     const api = createPipedreamApi(ctx.rest)
+    const browser = window.hermesDesktop?.platform === 'browser'
     const toast = {
       success: (title, message) => host.notify({ kind: 'success', message, title }),
       warning: (title, message) => host.notify({ kind: 'warning', message, title })
@@ -1210,6 +1301,7 @@ export default {
       render: () =>
         jsx(PipedreamAppsTab, {
           api,
+          browser,
           copyText: text => ctx.os.writeClipboard(text),
           fallbackExternalUserId,
           openExternal: url => ctx.os.openExternal(url),

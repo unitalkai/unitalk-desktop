@@ -444,6 +444,33 @@ describe('ModelPickerDialog plan usage', () => {
 })
 
 describe('ModelPickerDialog search ranking', () => {
+  it('hides OpenAI API choices and custom suggestions while preserving the current selection', async () => {
+    vi.mocked(requestModelOptions).mockResolvedValue({
+      model: 'gpt-5.5',
+      provider: 'openai-api',
+      providers: [
+        { slug: 'openai-api', name: 'OpenAI API', models: ['gpt-5.5'], authenticated: true },
+        { slug: 'openai-codex', name: 'OpenAI Codex', models: ['gpt-5.5'], authenticated: true }
+      ]
+    })
+    const onSelect = vi.fn()
+    renderPicker({ currentModel: 'gpt-5.5', currentProvider: 'openai-api', onSelect })
+
+    await screen.findByText('OpenAI Codex')
+    expect(screen.queryByText('OpenAI API')).toBeNull()
+    expect(screen.getByText(/current:.*gpt-5\.5.*openai-api/i)).toBeTruthy()
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(screen.getAllByRole('option')).toHaveLength(1)
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'gpt-5.5' } })
+    fireEvent.click(screen.getByRole('option'))
+    expect(onSelect).toHaveBeenCalledWith({ model: 'gpt-5.5', provider: 'openai-codex' })
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'new-model' } })
+    expect(screen.getByRole('option').textContent).toContain('OpenAI Codex')
+    expect(screen.queryByText('OpenAI API')).toBeNull()
+  })
+
   // Rows must come out in the order the shared fuzzyRank produces — the same
   // helper the web and TUI pickers use — so a query ranks identically on
   // every surface. Curated order puts the scattered match first; the ranked

@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import type { HermesGateway } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { Plus, Search, X } from '@/lib/icons'
-import { modelOptionsQueryKey, requestModelOptions } from '@/lib/model-options'
+import { isModelPickerProviderVisible, modelOptionsQueryKey, requestModelOptions } from '@/lib/model-options'
 import { displayModelName, modelDisplayParts } from '@/lib/model-status-label'
 import { foldIncludes, normalize } from '@/lib/text'
 import { confirm } from '@/store/confirm'
@@ -93,7 +93,9 @@ export function ModelVisibilityDialog({
   const providers = useMemo(
     () =>
       withCustomModels(
-        (modelOptions.data?.providers ?? []).filter(provider => (provider.models ?? []).length > 0),
+        (modelOptions.data?.providers ?? [])
+          .filter(isModelPickerProviderVisible)
+          .filter(provider => (provider.models ?? []).length > 0),
         customModels
       ),
     [modelOptions.data, customModels]
