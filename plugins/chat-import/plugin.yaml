@@ -1,0 +1,4 @@
+name: chat-import
+version: 0.1.0
+description: "Import chat history from ChatGPT, Claude, Grok and the Unitalk private assistant into Hermes sessions."
+author: Unitalk

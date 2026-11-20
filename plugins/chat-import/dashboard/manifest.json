@@ -1,0 +1,11 @@
+{
+  "name": "chat-import",
+  "label": "Chat Import",
+  "description": "Chat history import backend for the Settings import menu.",
+  "icon": "Upload",
+  "version": "0.1.0",
+  "tab": {
+    "hidden": true
+  },
+  "api": "plugin_api.py"
+}
