@@ -1,0 +1,4 @@
+name: knowledge-base
+version: 0.1.0
+description: "Qdrant-backed knowledge bases for Unitalk collaborators: Settings routes and agent retrieval."
+author: Unitalk
