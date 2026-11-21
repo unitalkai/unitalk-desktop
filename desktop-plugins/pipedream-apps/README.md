@@ -23,8 +23,10 @@ enables MCP server configuration after a successful connect.
 ## Behaviour
 
 - Browses Pipedream Connect apps with search, category filters and cursor pagination.
-- Connect opens the Pipedream Connect Link in the system browser and polls until the
-  account appears.
+- Connect opens the Pipedream Connect Link in a new tab (the system browser in
+  Electron) and polls until the account appears. In the browser-hosted app the
+  tab is closed automatically once the account appears or the dialog is
+  cancelled; Electron cannot close a system-browser tab.
 - Lists connected accounts, shows health/errors, reconnects or disconnects.
 - Uses the Clerk user id as `external_user_id` (persisted UUID fallback when Clerk is
   unavailable).

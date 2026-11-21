@@ -59,6 +59,28 @@ afterEach(() => {
 })
 
 describe('Edit Models reset', () => {
+  it('hides OpenAI API from model toggles and custom suggestions without deleting saved models', async () => {
+    vi.mocked(requestModelOptions).mockResolvedValue({
+      providers: [
+        { authenticated: true, models: ['gpt-5.5'], name: 'OpenAI API', slug: 'openai-api' },
+        ...OPTIONS.providers!
+      ]
+    })
+    const saved = [{ model: 'private-model', provider: 'openai-api' }]
+    $customModels.set(saved)
+    renderDialog()
+
+    await screen.findByText('OpenAI Codex')
+    expect(screen.queryByText('OpenAI API')).toBeNull()
+    expect(screen.queryByText(/private[- ]model/i)).toBeNull()
+    expect(screen.getAllByRole('switch')).toHaveLength(3)
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'new-model' } })
+    expect(screen.getByRole('button', { name: /new-model.*OpenAI Codex/ })).toBeTruthy()
+    expect(screen.queryByText('OpenAI API')).toBeNull()
+    expect($customModels.get()).toEqual(saved)
+  })
+
   it('restores the default shortlist when a model is stuck hidden by the known snapshot', async () => {
     // A curation saved while the snapshot machinery was live: gpt-6 was listed
     // when the user kept gpt-5.5 and switched it off, so the snapshot counts it

@@ -1,4 +1,4 @@
-import { useAuth, useClerk, useOrganization, useUser } from '@clerk/electron/react'
+import { useAuth, useClerk, useOrganization, useUser } from '@clerk/react'
 import { randomUuid } from '@hermes/shared'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -28,12 +28,18 @@ import {
   type ClerkSessionActions,
   DISABLED_CLERK_SNAPSHOT,
   publishClerkSession,
-  registerClerkSessionActions
+  registerClerkSessionActions,
+  registerClerkSignInAction
 } from '@/store/clerk-session'
+import { sameWebappIdentity, type WebappInstanceSession } from '@/store/webapp-instance'
 
-export function ClerkSessionBridge() {
+interface ClerkSessionBridgeProps {
+  instanceSession?: WebappInstanceSession
+}
+
+export function ClerkSessionBridge({ instanceSession }: ClerkSessionBridgeProps) {
   const clerk = useClerk()
-  const { isLoaded, isSignedIn, getToken } = useAuth()
+  const { isLoaded, isSignedIn, getToken, orgId, sessionId, userId } = useAuth()
   const { user } = useUser()
   const { organization } = useOrganization()
   const [organizations, setOrganizations] = useState<ClerkOrganizationSummary[]>([])
@@ -43,11 +49,40 @@ export function ClerkSessionBridge() {
   const [sourceId] = useState(() => randomUuid())
   const organizationGenerationRef = useRef(0)
 
+  useEffect(() => () => instanceSession?.dispose(), [instanceSession])
+
+  useEffect(() => {
+    if (!instanceSession || !isLoaded) {
+      return
+    }
+
+    void instanceSession.synchronize(
+      isSignedIn && sessionId && userId ? { organizationId: orgId ?? null, sessionId, userId } : null
+    )
+  }, [instanceSession, isLoaded, isSignedIn, orgId, sessionId, userId])
+
   useEffect(() => {
     setClerkTokenGetter(() => getToken())
 
     return () => setClerkTokenGetter(null)
   }, [getToken])
+
+  // The browser's sign-in screen remains mounted while organization actions are off.
+  useEffect(() => {
+    if (typeof clerk.openSignIn !== 'function') {
+      return
+    }
+
+    return registerClerkSignInAction(() => clerk.openSignIn({}))
+  }, [clerk])
+
+  // Unlike the Electron gate (which unmounts this bridge on sign-out), the
+  // browser keeps it mounted, so a later sign-in must clear the local flag.
+  useEffect(() => {
+    if (isSignedIn) {
+      setSignedOutLocally(false)
+    }
+  }, [isSignedIn])
 
   const refreshOrganizations = useCallback(async () => {
     const generation = ++organizationGenerationRef.current
@@ -109,21 +144,41 @@ export function ClerkSessionBridge() {
     })
   }, [isLoaded, isSignedIn, organization, organizations, sessionError, signedOutLocally, tokenSyncError, user])
 
+  const activateOrganization = useCallback(
+    async (organizationId: null | string) => {
+      if (instanceSession) {
+        if (!sessionId || !userId) {
+          throw new Error('Clerk session is not ready')
+        }
+
+        await instanceSession.synchronize({ organizationId, sessionId, userId }, () =>
+          clerk.setActive({ organization: organizationId })
+        )
+      } else {
+        const result = await applyActiveOrganization(clerk, organizationId, submitClerkToken)
+
+        setTokenSyncError(result.tokenSyncError)
+      }
+    },
+    [clerk, instanceSession, sessionId, userId]
+  )
+
   const syncFromPeer = useCallback(
     async (organizationId: null | string) => {
       setSessionError(null)
 
       try {
-        const result = await applyActiveOrganization(clerk, organizationId, submitClerkToken)
-
-        setTokenSyncError(result.tokenSyncError)
+        await activateOrganization(organizationId)
         await refreshOrganizations()
       } catch (error) {
         setSessionError(clerkErrorMessage(error))
-        window.location.reload()
+
+        if (!instanceSession) {
+          window.location.reload()
+        }
       }
     },
-    [clerk, refreshOrganizations]
+    [activateOrganization, instanceSession, refreshOrganizations]
   )
 
   useEffect(() => {
@@ -164,9 +219,18 @@ export function ClerkSessionBridge() {
       setTokenSyncError(null)
 
       try {
-        const result = await applyActiveOrganization(clerk, organizationId, submitClerkToken)
+        await activateOrganization(organizationId)
 
-        setTokenSyncError(result.tokenSyncError)
+        if (
+          instanceSession &&
+          !sameWebappIdentity(
+            instanceSession.state.get().identity,
+            sessionId && userId ? { organizationId, sessionId, userId } : null
+          )
+        ) {
+          return
+        }
+
         sendClerkSessionChanged({
           kind: CLERK_SESSION_CHANGED_KIND,
           organizationId,
@@ -204,9 +268,14 @@ export function ClerkSessionBridge() {
         setSessionError(null)
 
         try {
-          const result = await refreshClerkSession(clerk, submitClerkToken)
+          const result = await refreshClerkSession(clerk, instanceSession ? undefined : submitClerkToken)
 
           setTokenSyncError(result.tokenSyncError)
+
+          if (instanceSession) {
+            await instanceSession.retry()
+          }
+
           await refreshOrganizations()
         } catch (error) {
           setSessionError(clerkErrorMessage(error))
@@ -218,7 +287,12 @@ export function ClerkSessionBridge() {
         setSignedOutLocally(true)
 
         try {
-          await clerk.signOut()
+          if (instanceSession) {
+            await instanceSession.synchronize(null, () => clerk.signOut())
+          } else {
+            await clerk.signOut()
+          }
+
           publishClerkSession({ ...DISABLED_CLERK_SNAPSHOT, enabled: true, status: 'signed-out' })
         } catch (error) {
           setSignedOutLocally(false)
@@ -228,7 +302,7 @@ export function ClerkSessionBridge() {
     }
 
     return registerClerkSessionActions(actions)
-  }, [clerk, isSignedIn, refreshOrganizations, sourceId, user])
+  }, [activateOrganization, clerk, instanceSession, isSignedIn, refreshOrganizations, sessionId, sourceId, user, userId])
 
   return null
 }

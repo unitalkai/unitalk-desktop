@@ -1,8 +1,10 @@
-import { ClerkProvider, SignIn, SignUp, useAuth } from '@clerk/electron/react'
+import { ClerkProvider as ElectronClerkProvider, SignIn, SignUp, useAuth } from '@clerk/electron/react'
+import { ClerkProvider as BrowserClerkProvider } from '@clerk/react'
 import { type ReactNode, useEffect, useState } from 'react'
 
-import { clerkEnabled, clerkPublishableKey } from '@/lib/clerk-config'
+import { clerkBrowserEnabled, clerkEnabled, clerkPublishableKey } from '@/lib/clerk-config'
 
+import { BrowserClerkAuthGate } from './browser-clerk-auth-gate'
 import { ClerkSessionBridge } from './clerk-session-bridge'
 
 const AUTH_CHANNEL = 'unitalk-auth'
@@ -11,15 +13,23 @@ type AuthMode = 'sign-in' | 'sign-up'
 const authMode = (): AuthMode => (window.location.hash.includes('/sign-up') ? 'sign-up' : 'sign-in')
 
 export function AuthGate({ children }: { children: ReactNode }) {
-  if (!clerkEnabled) {
-    return <>{children}</>
+  if (clerkEnabled) {
+    return (
+      <ElectronClerkProvider publishableKey={clerkPublishableKey}>
+        <ClerkAuthGate>{children}</ClerkAuthGate>
+      </ElectronClerkProvider>
+    )
   }
 
-  return (
-    <ClerkProvider publishableKey={clerkPublishableKey}>
-      <ClerkAuthGate>{children}</ClerkAuthGate>
-    </ClerkProvider>
-  )
+  if (clerkBrowserEnabled) {
+    return (
+      <BrowserClerkProvider publishableKey={clerkPublishableKey}>
+        <BrowserClerkAuthGate>{children}</BrowserClerkAuthGate>
+      </BrowserClerkProvider>
+    )
+  }
+
+  return <>{children}</>
 }
 
 function ClerkAuthGate({ children }: { children: ReactNode }) {

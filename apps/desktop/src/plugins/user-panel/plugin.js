@@ -47,6 +47,14 @@ const PRESET_AMOUNTS = [5, 10, 25, 50, 100, 250]
 const CREDITS_FORMAT = new Intl.NumberFormat('de-DE')
 const EURO_FORMAT = new Intl.NumberFormat('de-DE', { currency: 'EUR', style: 'currency' })
 
+// Hermes Web owns the LiteLLM gateway key, so the Desktop asks it for the
+// active team's remaining credits instead of calling the gateway directly.
+const TEAM_CREDITS_URL = 'https://agent.unitalk.ai/api/team'
+const TEAM_CREDITS_REFRESH_MS = 60_000
+const TEAM_CREDITS_FORMAT = new Intl.NumberFormat('fr-FR')
+const teamCreditsCache = new Map()
+const teamCreditsInflight = new Map()
+
 const formatCredits = amount => CREDITS_FORMAT.format(amount * CREDITS_PER_EURO)
 const formatEuro = amount => EURO_FORMAT.format(amount)
 
@@ -60,7 +68,6 @@ const clampAmount = value => {
   return Math.min(MAX_CUSTOM_AMOUNT, Math.max(MIN_CUSTOM_AMOUNT, parsed))
 }
 
-const INFO_ROW = 'flex items-center gap-2 rounded-md px-2 py-1 text-xs text-(--ui-text-primary)'
 const ICON = 'shrink-0 text-(--ui-text-secondary)'
 
 const messageOf = error => (error instanceof Error && error.message) || String(error || 'Request failed')
@@ -93,13 +100,6 @@ function AccountAvatar({ className, imageUrl, label }) {
       })
 }
 
-function MenuInfoRow({ icon, label, trailing }) {
-  return jsxs('div', {
-    className: INFO_ROW,
-    children: [icon, jsx('span', { className: 'min-w-0 flex-1 truncate', children: label }), trailing || null]
-  })
-}
-
 function MenuActionRow({ icon, label, onSelect, trailing }) {
   return jsxs(DropdownMenuItem, {
     className: 'min-w-0 text-xs',
@@ -108,25 +108,143 @@ function MenuActionRow({ icon, label, onSelect, trailing }) {
   })
 }
 
-/*
-function AiCreditsValue() {
-  return jsxs('span', {
-    className: 'flex shrink-0 items-center gap-2',
+function PublicMenuRows({ credits, onBuyCredits, openLink }) {
+  return jsxs('div', {
+    className: 'flex flex-col gap-1',
     children: [
-      jsx('span', {
-        className: 'grid size-4 place-items-center rounded-full text-white',
-        style: { backgroundColor: CREDITS_PURPLE },
-        children: jsx(Codicon, { name: 'zap', size: '0.6rem' })
+      jsx(MenuActionRow, {
+        icon: jsx(Codicon, { className: ICON, name: 'settings', size: '0.875rem' }),
+        key: 'settings',
+        label: 'Settings',
+        onSelect: () => openLink(LINK_URLS.settings)
       }),
-      jsx('span', {
-        className: 'text-xs font-semibold tabular-nums',
-        style: { color: CREDITS_PURPLE },
-        children: '3379353'
+      jsxs(MenuActionRow, {
+        icon: jsx(Codicon, { className: ICON, name: 'zap', size: '0.875rem' }),
+        key: 'ai-credits',
+        label: 'AI Credits',
+        onSelect: () => openLink(LINK_URLS.aiCredits),
+        trailing: credits === null || credits === undefined ? null : jsx(AiCreditsValue, { credits })
+      }),
+      jsx(MenuActionRow, {
+        icon: jsx(Codicon, { className: ICON, name: 'credit-card', size: '0.875rem' }),
+        key: 'buy-credits',
+        label: 'Buy credits',
+        onSelect: onBuyCredits
+      }),
+      jsx(MenuActionRow, {
+        icon: jsx(Codicon, { className: ICON, name: 'credit-card', size: '0.875rem' }),
+        key: 'pricing',
+        label: 'Pricing',
+        onSelect: () => openLink(LINK_URLS.pricing)
+      }),
+      jsx(MenuActionRow, {
+        icon: jsx(Codicon, { className: ICON, name: 'comment-discussion', size: '0.875rem' }),
+        key: 'book-demo',
+        label: 'Book a demo',
+        onSelect: () => openLink(LINK_URLS.bookDemo)
       })
     ]
   })
 }
-*/
+
+function AiCreditsValue({ credits }) {
+  return jsx('span', {
+    className: 'ml-auto shrink-0 text-xs font-semibold tabular-nums text-(--ui-purple)',
+    children: TEAM_CREDITS_FORMAT.format(credits)
+  })
+}
+
+async function loadTeamCredits(organizationId) {
+  const token = await host.clerk.getToken()
+
+  if (!token) {
+    return null
+  }
+
+  const response = await fetch(TEAM_CREDITS_URL, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+
+  if (!response.ok) {
+    return null
+  }
+
+  const data = await response.json()
+  const value = Number(data?.credits)
+
+  if (!Number.isFinite(value)) {
+    return null
+  }
+
+  const credits = Math.max(0, Math.floor(value))
+
+  teamCreditsCache.set(organizationId, { credits, fetchedAt: Date.now() })
+
+  return credits
+}
+
+function useTeamCredits({ menuOpen, organizationId, signedIn }) {
+  const [credits, setCredits] = useState(null)
+
+  useEffect(() => {
+    if (!signedIn || !organizationId) {
+      setCredits(null)
+
+      return
+    }
+
+    const cached = teamCreditsCache.get(organizationId)
+
+    if (cached) {
+      setCredits(cached.credits)
+    }
+
+    if (cached && Date.now() - cached.fetchedAt < TEAM_CREDITS_REFRESH_MS) {
+      return
+    }
+
+    if (!menuOpen && cached) {
+      return
+    }
+
+    if (typeof host.clerk?.getToken !== 'function') {
+      setCredits(cached?.credits ?? null)
+
+      return
+    }
+
+    let cancelled = false
+    let request = teamCreditsInflight.get(organizationId)
+
+    if (!request) {
+      request = loadTeamCredits(organizationId)
+      teamCreditsInflight.set(organizationId, request)
+      request.catch(() => undefined).finally(() => {
+        if (teamCreditsInflight.get(organizationId) === request) {
+          teamCreditsInflight.delete(organizationId)
+        }
+      })
+    }
+
+    request
+      .then(next => {
+        if (!cancelled) {
+          setCredits(next === null ? (cached?.credits ?? null) : next)
+        }
+      })
+      .catch(() => {
+        if (!cancelled && !cached) {
+          setCredits(null)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [menuOpen, organizationId, signedIn])
+
+  return credits
+}
 
 function CreateOrganizationDialog({ onOpenChange, open }) {
   const [name, setName] = useState('')
@@ -379,18 +497,76 @@ function UserPanelContent({ onOpenUrl }) {
   const [signingOut, setSigningOut] = useState(false)
   const [retryingSync, setRetryingSync] = useState(false)
 
-  if (!snapshot.enabled || snapshot.status === 'disabled' || snapshot.status === 'signed-out') {
-    return null
+  const openLink = url => {
+    setMenuOpen(false)
+    onOpenUrl(url)
   }
 
-  if (snapshot.status === 'loading' || !snapshot.user) {
-    return jsx(Button, {
-      'aria-label': 'Loading account',
-      disabled: true,
-      size: 'icon-titlebar',
-      type: 'button',
-      variant: 'ghost',
-      children: jsx('span', { className: 'size-5 rounded-full bg-(--ui-bg-quaternary)' })
+  const signedIn = snapshot.enabled && snapshot.status === 'signed-in' && Boolean(snapshot.user)
+  const organizationId = signedIn ? (snapshot.activeOrganization?.id ?? null) : null
+  const teamCredits = useTeamCredits({ menuOpen, organizationId, signedIn })
+
+  // Signed out (or Clerk unavailable): keep the same panel, but replace the
+  // organization switcher with a Login row that opens Clerk's sign-in modal.
+  if (!signedIn) {
+    const openSignIn = () => {
+      if (typeof host.clerk.signIn !== 'function') {
+        host.notifyError(new Error('Sign-in is not available in this app'), 'Could not open sign-in')
+        return
+      }
+
+      void host.clerk.signIn().catch(error => host.notifyError(error, 'Could not open sign-in'))
+    }
+
+    return jsxs(DropdownMenu, {
+      onOpenChange: setMenuOpen,
+      open: menuOpen,
+      children: [
+        jsx(DropdownMenuTrigger, {
+          asChild: true,
+          children: jsx(Button, {
+            'aria-label': 'Open account menu',
+            className: 'text-(--ui-text-secondary)',
+            size: 'icon-titlebar',
+            style: { order: -1 },
+            title: 'Sign in',
+            type: 'button',
+            variant: 'ghost',
+            children: jsx(Codicon, { name: 'account', size: '1rem' })
+          })
+        }),
+        jsxs(DropdownMenuContent, {
+          align: 'start',
+          className: 'min-w-52 max-w-72',
+          side: 'bottom',
+          sideOffset: 6,
+          style: { width: '260px' },
+          children: [
+            jsx(MenuActionRow, {
+              icon: jsx(Codicon, { className: ICON, name: 'sign-in', size: '0.875rem' }),
+              key: 'sign-in',
+              label: 'Log in',
+              onSelect: () => {
+                setMenuOpen(false)
+                openSignIn()
+              }
+            }),
+            jsx(DropdownMenuSeparator, {}),
+            jsx(PublicMenuRows, {
+              onBuyCredits: () => {
+                setMenuOpen(false)
+                setBuyOpen(true)
+              },
+              openLink
+            })
+          ]
+        }),
+        jsx(BuyCreditsDialog, {
+          onOpenChange: setBuyOpen,
+          onOpenUrl,
+          open: buyOpen
+        })
+      ]
     })
   }
 
@@ -435,11 +611,6 @@ function UserPanelContent({ onOpenUrl }) {
     } finally {
       setRetryingSync(false)
     }
-  }
-
-  const openLink = url => {
-    setMenuOpen(false)
-    onOpenUrl(url)
   }
 
   return jsxs(DropdownMenu, {
@@ -510,7 +681,6 @@ function UserPanelContent({ onOpenUrl }) {
                       jsxs(DropdownMenuItem, {
                         className: 'min-w-0',
                         disabled: pending,
-                        key: 'personal',
                         onSelect: event => {
                           event.preventDefault()
                           void switchTo(null)
@@ -535,7 +705,7 @@ function UserPanelContent({ onOpenUrl }) {
                                 })
                               : null
                         ]
-                      }),
+                      }, 'personal'),
                       ...snapshot.organizations.map(organization => {
                         const active = activeOrganization?.id === organization.id
 
@@ -592,51 +762,13 @@ function UserPanelContent({ onOpenUrl }) {
             ]
           }),
           jsx(DropdownMenuSeparator, {}),
-          jsxs('div', {
-            className: 'flex flex-col gap-1',
-            children: [
-              jsx(MenuActionRow, {
-                icon: jsx(Codicon, { className: ICON, name: 'settings', size: '0.875rem' }),
-                key: 'settings',
-                label: 'Settings',
-                onSelect: () => openLink(LINK_URLS.settings)
-              }),
-              jsxs(MenuActionRow, {
-                icon: jsx(Codicon, { className: ICON, name: 'zap', size: '0.875rem' }),
-                key: 'ai-credits',
-                label: 'AI Credits',
-                onSelect: () => openLink(LINK_URLS.aiCredits)
-                /* trailing: jsx(AiCreditsValue, {}) */
-              }),
-              jsx(MenuActionRow, {
-                icon: jsx(Codicon, { className: ICON, name: 'credit-card', size: '0.875rem' }),
-                key: 'buy-credits',
-                label: 'Buy credits',
-                onSelect: () => {
-                  setMenuOpen(false)
-                  setBuyOpen(true)
-                }
-              }),
-              jsx(MenuActionRow, {
-                icon: jsx(Codicon, { className: ICON, name: 'credit-card', size: '0.875rem' }),
-                key: 'pricing',
-                label: 'Pricing',
-                onSelect: () => openLink(LINK_URLS.pricing)
-              }),
-              /*
-              jsx(MenuInfoRow, {
-                icon: jsx(Codicon, { className: ICON, name: 'person-add', size: '0.875rem' }),
-                key: 'add-members',
-                label: 'Add Members'
-              }),
-              */
-              jsx(MenuActionRow, {
-                icon: jsx(Codicon, { className: ICON, name: 'comment-discussion', size: '0.875rem' }),
-                key: 'book-demo',
-                label: 'Book a demo',
-                onSelect: () => openLink(LINK_URLS.bookDemo)
-              })
-            ]
+          jsx(PublicMenuRows, {
+            credits: teamCredits,
+            onBuyCredits: () => {
+              setMenuOpen(false)
+              setBuyOpen(true)
+            },
+            openLink
           }),
           snapshot.tokenSyncError
             ? jsxs('div', {

@@ -30,7 +30,7 @@ import {
   useQueryClient,
   useValue
 } from '@hermes/plugin-sdk'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
 export const ID = 'pipedream-apps'
@@ -218,8 +218,7 @@ export function createPipedreamApi(rest) {
       const query = params.toString()
       return rest(`/apps${query ? `?${query}` : ''}`)
     },
-    connect: ({ externalUserId, appSlug }) =>
-      rest('/connect', { method: 'POST', body: { externalUserId, appSlug } }),
+    connect: ({ externalUserId, appSlug }) => rest('/connect', { method: 'POST', body: { externalUserId, appSlug } }),
     accounts: externalUserId => rest(`/accounts?externalUserId=${encodeURIComponent(externalUserId)}`),
     disconnect: ({ externalUserId, accountId }) =>
       rest(`/accounts/${encodeURIComponent(accountId)}?externalUserId=${encodeURIComponent(externalUserId)}`, {
@@ -331,20 +330,21 @@ function AppCard({ app, connected, onOpen, onConnect }) {
 }
 
 function SkeletonCard({ index }) {
-  return jsxs('div', {
-    className: 'pd-skeleton',
-    children: [
-      jsx(Skeleton, { className: 'h-9 w-9 rounded-[9px]' }),
-      jsxs('div', {
-        className: 'pd-skeleton-copy',
-        children: [
-          jsx(Skeleton, { className: 'h-2.5 w-40' }),
-          jsx(Skeleton, { className: 'h-2 w-full' })
-        ]
-      }),
-      jsx(Skeleton, { className: 'h-7 w-20' })
-    ]
-  }, index)
+  return jsxs(
+    'div',
+    {
+      className: 'pd-skeleton',
+      children: [
+        jsx(Skeleton, { className: 'h-9 w-9 rounded-[9px]' }),
+        jsxs('div', {
+          className: 'pd-skeleton-copy',
+          children: [jsx(Skeleton, { className: 'h-2.5 w-40' }), jsx(Skeleton, { className: 'h-2 w-full' })]
+        }),
+        jsx(Skeleton, { className: 'h-7 w-20' })
+      ]
+    },
+    index
+  )
 }
 
 function matchesQuery(value, query) {
@@ -353,10 +353,7 @@ function matchesQuery(value, query) {
 }
 
 function accountMatches(account, query) {
-  return (
-    matchesQuery(appNameOf(account?.app) || '', query) ||
-    matchesQuery(appSlugOf(account?.app) || '', query)
-  )
+  return matchesQuery(appNameOf(account?.app) || '', query) || matchesQuery(appSlugOf(account?.app) || '', query)
 }
 
 function SectionHeading({ count, title }) {
@@ -427,14 +424,8 @@ export function AppsDirectory({
   const page = history.length + 1
   const showPager = Boolean(data.nextCursor) || history.length > 0
 
-  const connectedAccounts = useMemo(
-    () => accounts.filter(account => accountMatches(account, query)),
-    [accounts, query]
-  )
-  const availableApps = useMemo(
-    () => apps.filter(app => !connectedSlugs.has(appSlugOf(app))),
-    [apps, connectedSlugs]
-  )
+  const connectedAccounts = useMemo(() => accounts.filter(account => accountMatches(account, query)), [accounts, query])
+  const availableApps = useMemo(() => apps.filter(app => !connectedSlugs.has(appSlugOf(app))), [apps, connectedSlugs])
   const availableCount = Math.max(
     0,
     (data.totalCount || 0) - new Set(connectedAccounts.map(accountSlugOf).filter(Boolean)).size
@@ -516,12 +507,16 @@ export function AppsDirectory({
           : jsx('div', {
               className: 'pd-grid',
               children: availableApps.map(app =>
-                jsx(AppCard, {
-                  app,
-                  connected: false,
-                  onConnect: () => onConnect(app),
-                  onOpen: () => onOpen(app)
-                }, app.name_slug || app.id || app.name)
+                jsx(
+                  AppCard,
+                  {
+                    app,
+                    connected: false,
+                    onConnect: () => onConnect(app),
+                    onOpen: () => onOpen(app)
+                  },
+                  app.name_slug || app.id || app.name
+                )
               )
             })
 
@@ -554,9 +549,7 @@ export function AppsDirectory({
                     jsxs(SelectContent, {
                       children: [
                         jsx(SelectItem, { value: ALL_CATEGORIES, children: t('allCategories') }),
-                        ...categories.map(item =>
-                          jsx(SelectItem, { value: item.id, children: item.name }, item.id)
-                        )
+                        ...categories.map(item => jsx(SelectItem, { value: item.id, children: item.name }, item.id))
                       ]
                     })
                   ]
@@ -663,7 +656,11 @@ function AccountRow({ account, onReconnect, onDisconnect }) {
             className: 'pd-card-title',
             children: [
               jsx('span', { className: 'pd-account-name', children: name }),
-              jsx(Badge, { size: 'xs', variant: tone === 'ok' ? 'success' : tone === 'warn' ? 'warn' : 'destructive', children: stateLabel })
+              jsx(Badge, {
+                size: 'xs',
+                variant: tone === 'ok' ? 'success' : tone === 'warn' ? 'warn' : 'destructive',
+                children: stateLabel
+              })
             ]
           }),
           subtitle ? jsx('div', { className: 'pd-account-sub', children: subtitle }) : null,
@@ -719,10 +716,7 @@ export function AppDetailsDialog({ app, connected, onClose, onConnect }) {
           children: [
             jsxs('div', {
               className: 'pd-dialog-head',
-              children: [
-                jsx(AppLogo, { app }),
-                jsx('span', { className: 'pd-dialog-name', children: appNameOf(app) })
-              ]
+              children: [jsx(AppLogo, { app }), jsx('span', { className: 'pd-dialog-name', children: appNameOf(app) })]
             }),
             app?.description ? jsx('p', { className: 'pd-dialog-desc', children: app.description }) : null,
             jsxs('div', {
@@ -773,6 +767,35 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
   const [refreshing, setRefreshing] = useState(false)
   const [copied, setCopied] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  const tabRef = useRef(null)
+
+  const closeTab = useCallback(() => {
+    const tab = tabRef.current
+    tabRef.current = null
+    if (tab && !tab.closed) tab.close()
+  }, [])
+
+  const openConnectTab = useCallback(
+    url => {
+      closeTab()
+
+      // Only the browser-hosted desktop can close the tab it opened. Electron
+      // hands the link to the system browser, which the app cannot reach.
+      if (document.documentElement.dataset.hermesDesktopHost === 'browser') {
+        const tab = window.open(url, '_blank')
+        if (tab) {
+          tab.opener = null
+          tabRef.current = tab
+          return
+        }
+      }
+
+      void openExternal(url)
+    },
+    [closeTab, openExternal]
+  )
+
+  useEffect(() => () => closeTab(), [closeTab])
 
   useEffect(() => {
     if (!slug) {
@@ -784,6 +807,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
 
     let disposed = false
 
+    closeTab()
     setStatus('starting')
     setFailureKind('connect')
     setError('')
@@ -797,7 +821,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
         setLink(result.connectLinkUrl)
         setDeadline(Date.now() + CONNECT_TIMEOUT_MS)
         setStatus('waiting')
-        void openExternal(result.connectLinkUrl)
+        openConnectTab(result.connectLinkUrl)
       } catch (nextError) {
         if (disposed) return
         setFailureKind('connect')
@@ -809,13 +833,14 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
     return () => {
       disposed = true
     }
-  }, [api, attempt, externalUserId, openExternal, slug, t])
+  }, [api, attempt, closeTab, externalUserId, openConnectTab, slug, t])
 
   const checkAccounts = useCallback(async () => {
     try {
       const accounts = await api.accounts(externalUserId)
       const match = accounts.find(account => accountSlugOf(account) === slug)
       if (match) {
+        closeTab()
         onConnected(slug, name)
         return true
       }
@@ -823,7 +848,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
     } catch {
       return false
     }
-  }, [api, externalUserId, name, onConnected, slug])
+  }, [api, closeTab, externalUserId, name, onConnected, slug])
 
   useEffect(() => {
     if (status !== 'waiting' || !deadline) return undefined
@@ -890,7 +915,10 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
         status === 'starting'
           ? jsxs('div', {
               className: 'pd-wait',
-              children: [jsx(GlyphSpinner, { ariaLabel: t('preparing') }), jsx('span', { className: 'pd-wait-copy', children: t('preparing') })]
+              children: [
+                jsx(GlyphSpinner, { ariaLabel: t('preparing') }),
+                jsx('span', { className: 'pd-wait-copy', children: t('preparing') })
+              ]
             })
           : status === 'waiting'
             ? jsxs('div', {
@@ -909,7 +937,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
                   children: [
                     link
                       ? jsx(Button, {
-                          onClick: () => void openExternal(link),
+                          onClick: () => openConnectTab(link),
                           size: 'sm',
                           type: 'button',
                           variant: 'outline',
@@ -949,7 +977,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
                   children: [
                     link
                       ? jsx(Button, {
-                          onClick: () => void openExternal(link),
+                          onClick: () => openConnectTab(link),
                           size: 'sm',
                           type: 'button',
                           variant: 'outline',
@@ -1129,10 +1157,16 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
           if (!disconnectTarget) return
           await api.disconnect({ accountId: disconnectTarget.id, externalUserId })
           await refreshAccounts()
-          toast.success(t('appDisconnected'), appNameOf(disconnectTarget.app) || accountSubtitle(disconnectTarget) || t('unknownApp'))
+          toast.success(
+            t('appDisconnected'),
+            appNameOf(disconnectTarget.app) || accountSubtitle(disconnectTarget) || t('unknownApp')
+          )
         },
         open: disconnectTarget !== null,
-        title: t('disconnectTitle', appNameOf(disconnectTarget?.app) || accountSubtitle(disconnectTarget) || t('unknownApp'))
+        title: t(
+          'disconnectTitle',
+          appNameOf(disconnectTarget?.app) || accountSubtitle(disconnectTarget) || t('unknownApp')
+        )
       })
     ]
   })

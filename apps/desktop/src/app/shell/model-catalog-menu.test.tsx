@@ -17,6 +17,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { DropdownMenu, DropdownMenuContent } from '@/components/ui/dropdown-menu'
 import { registry } from '@/contrib/registry'
 import { queryClient } from '@/lib/query-client'
+import { $customModels } from '@/store/custom-models'
 import { $favoriteModels, favoriteModelKey, toggleFavoriteModel } from '@/store/favorite-models'
 import { $localModelsEnabled } from '@/store/local-models-flag'
 import { localModelsKey, localModelsOwner } from '@/store/local-runtime-jobs'
@@ -67,6 +68,7 @@ beforeEach((): void => {
   queryClient.clear()
   queryClient.setDefaultOptions({ queries: { ...queryClient.getDefaultOptions().queries, retry: false } })
   window.localStorage.clear()
+  $customModels.set([])
   $visibleModels.set(null)
   $favoriteModels.set([])
   queryClient.setQueryData(localModelsKey(localModelsOwner(), 'jobs'), [])
@@ -360,6 +362,42 @@ function renderMenu(current: Partial<ModelMenuController['current']> = {}, host:
 
   return select
 }
+
+it('hides OpenAI API from groups, favorites, search and custom suggestions without changing the current pick', async () => {
+  const options = {
+    model: 'gpt-5.5',
+    provider: 'openai-api',
+    providers: [
+      { models: ['gpt-5.5'], name: 'OpenAI API', slug: 'openai-api' },
+      { models: ['gpt-5.5'], name: 'OpenAI Codex', slug: 'openai-codex' },
+      { models: ['company-model'], name: 'Company OpenAI', slug: 'custom:openai-api' }
+    ]
+  }
+
+  getGlobalModelOptions.mockResolvedValue(options)
+  $favoriteModels.set([favoriteModelKey('openai-api', 'gpt-5.5')])
+  $customModels.set([{ model: 'private-model', provider: 'openai-api' }])
+
+  const select = renderMenu({ model: options.model, provider: options.provider })
+
+  await screen.findByText('OpenAI Codex')
+  expect(screen.getByText('Company OpenAI')).toBeTruthy()
+  expect(screen.queryByText('OpenAI API')).toBeNull()
+  expect(screen.queryByText('Favorites')).toBeNull()
+  expect(screen.queryByText(/private[- ]model/i)).toBeNull()
+  expect(select).not.toHaveBeenCalled()
+  expect(queryClient.getQueryData(['model-options', 'default', 'global'])).toEqual(options)
+
+  const input = screen.getByRole('textbox', { name: 'Search models' })
+  fireEvent.change(input, { target: { value: 'gpt-5.5' } })
+  expect(screen.queryByText('OpenAI API')).toBeNull()
+  fireEvent.keyDown(input, { key: 'Enter' })
+  await waitFor(() => expect(select).toHaveBeenCalledWith('gpt-5.5', 'openai-codex'))
+
+  fireEvent.change(input, { target: { value: 'new-model' } })
+  expect(screen.getByText('OpenAI Codex')).toBeTruthy()
+  expect(screen.queryByText('OpenAI API')).toBeNull()
+})
 
 // Curation is ONE global preference, so it belongs to the catalog rather than
 // to whichever surface mounted it. If a host had to opt in, the composer and
