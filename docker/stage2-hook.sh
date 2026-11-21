@@ -445,6 +445,51 @@ seed_one ".env" ".env.example"
 seed_one "config.yaml" "cli-config.yaml.example"
 seed_one "SOUL.md" "docker/SOUL.md"
 
+# --- Unitalk persona over a stock Hermes SOUL.md ---
+# docker/SOUL.md is the Unitalk persona, and seed_one above gives it to a
+# fresh agent. A SOUL.md that is still one of Hermes' own seed texts
+# (hermes_cli/default_soul.py: the current default, an older default or the
+# comment-only scaffold) holds nothing the member wrote, so it gets the Unitalk
+# persona too; older images seeded the Hermes text. Any other SOUL.md belongs
+# to the member and is never touched. Written as hermes through a temp file
+# renamed over it, with the same mode; a failure never blocks the start.
+seed_unitalk_soul() {
+    soul="$HERMES_HOME/SOUL.md"
+    if [ ! -f "$soul" ] || [ ! -f "$INSTALL_DIR/docker/SOUL.md" ]; then
+        return 0
+    fi
+    if refuse_symlinked_path "persona seed" "$soul"; then
+        return 0
+    fi
+    as_hermes "$INSTALL_DIR/.venv/bin/python" -c '
+import os, sys, tempfile
+from hermes_cli.default_soul import DEFAULT_SOUL_MD, _normalize_soul, is_legacy_template_soul
+path, source = sys.argv[1], sys.argv[2]
+with open(path, encoding="utf-8-sig") as f:
+    text = f.read()
+if _normalize_soul(text) != _normalize_soul(DEFAULT_SOUL_MD) and not is_legacy_template_soul(text):
+    sys.exit(0)
+with open(source, encoding="utf-8") as f:
+    persona = f.read()
+mode = os.stat(path).st_mode & 0o777
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".SOUL.md.", suffix=".seed")
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(persona)
+    os.chmod(tmp, mode)
+    os.replace(tmp, path)
+except BaseException:
+    try:
+        os.unlink(tmp)
+    except OSError:
+        pass
+    raise
+print("[stage2] SOUL.md held a stock Hermes text; seeded the Unitalk persona")
+' "$soul" "$INSTALL_DIR/docker/SOUL.md" \
+        || echo "[stage2] Warning: could not check SOUL.md for a stock Hermes text; continuing"
+}
+seed_unitalk_soul
+
 # --- Ensure a gateway api_server key exists (loopback control plane) ---
 # The gateway's aiohttp api_server refuses to start without a strong
 # API_SERVER_KEY (>=16 chars; startup guard in gateway/platforms/api_server.py).
