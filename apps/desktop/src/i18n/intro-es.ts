@@ -101,13 +101,7 @@ export const introEs: Translations['intro'] = {
       'Describe la tarea. Arraso con los archivos, aplasto las pruebas que fallan y dejo un commit que LO PETA. Venga, venga, venga.',
       'Errata diminuta o refactorización enorme, da igual. Hoy entrego código limpio. Di la tarea y a TRABAJAR.'
     ],
-    none: [
-      'Haz una pregunta, pega un error o indícame un repositorio. Puedo leer código, usar herramientas y ayudarte a entregar.',
-      'Describe la tarea con tus palabras. Elegiré las herramientas adecuadas, explicaré mi plan y te consultaré antes de los pasos arriesgados.',
-      'Suelta una ruta de archivo, un traceback o una idea en bruto. Investigaré, sugeriré los siguientes pasos y lo mantendré todo reversible.',
-      'Busca en el repositorio, edita archivos, ejecuta pruebas, abre PR. Dime el objetivo y yo me ocupo de la parte mecánica.',
-      'Escribe una tarea, una pregunta o un fragmento. Recuerdo la sesión, cito mis fuentes y me detengo a preguntar cuando tengo dudas.'
-    ]
+    none: ['¿En qué vamos a trabajar?']
   },
   custom: label => [
     'Envía la tarea, el archivo o la idea en bruto. Usaré la voz que configuraste y mantendré el trabajo ligado a este repositorio.',
