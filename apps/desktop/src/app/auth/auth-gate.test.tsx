@@ -178,7 +178,7 @@ describe('AuthGate in the browser host', () => {
   it('offers sign-in recovery for instance HTTP 401 while keeping the old viewer closed', async () => {
     fetcher.mockResolvedValueOnce(json({ error: 'Unauthorized' }, 401))
     render(app())
-    await screen.findByText('Your Unitalk session could not be authenticated. Sign in again to continue.')
+    await screen.findByText('Please sign in again to continue.')
     expect(mocks.mount).not.toHaveBeenCalled()
     expect(screen.queryByText('Create an instance for this organization to continue.')).toBeNull()
     expect(screen.queryByText('Choose organization')).toBeNull()
