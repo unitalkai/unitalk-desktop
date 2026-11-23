@@ -60,7 +60,7 @@ export function WebappInstanceStatus({
         <div role="alert">
           <ErrorState description={sessionCopy.description} title={sessionCopy.title} />
         </div>
-        <div className="grid w-full gap-2">
+        <div className="grid max-w-full justify-items-center gap-2">
           {actionError && <p className="text-center text-sm text-destructive" role="alert">{actionError}</p>}
           <Button onClick={onSignOut} size="lg">{copy.signInAgain}</Button>
           <Button onClick={onRetry} size="lg" variant="ghost">{t.common.retry}</Button>
