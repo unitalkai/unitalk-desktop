@@ -1,11 +1,13 @@
 import { OrganizationSwitcher, SignIn, SignUp } from '@clerk/react'
 import { useEffect, useState } from 'react'
 
+import { Wordmark } from '@/components/chat/wordmark'
 import { Button } from '@/components/ui/button'
 import { ErrorState } from '@/components/ui/error-state'
 import { useI18n } from '@/i18n'
 import type { WebappInstanceState } from '@/store/webapp-instance'
 
+import { sessionErrorCopy } from './session-error-copy'
 import { webappInstanceCopy } from './webapp-instance-copy'
 
 interface WebappInstanceStatusProps {
@@ -49,12 +51,31 @@ export function WebappInstanceStatus({
     return <BrowserSignIn />
   }
 
+  if (state.status === 'unauthorized' && signedIn) {
+    const sessionCopy = sessionErrorCopy(locale)
+
+    return (
+      <div className="grid w-full max-w-md justify-items-center gap-8">
+        <Wordmark className="text-foreground" fitMin="1.5rem" text="Unitalk" width="7rem" />
+        <div role="alert">
+          <ErrorState description={sessionCopy.description} title={sessionCopy.title} />
+        </div>
+        <div className="grid w-full gap-2">
+          {actionError && <p className="text-center text-sm text-destructive" role="alert">{actionError}</p>}
+          <Button onClick={onSignOut} size="lg">{copy.signInAgain}</Button>
+          <Button onClick={onRetry} size="lg" variant="ghost">{t.common.retry}</Button>
+        </div>
+      </div>
+    )
+  }
+
   const descriptions: Partial<Record<WebappInstanceState['status'], string>> = {
     missing: copy.missing,
     inactive: copy.inactive,
     unauthorized: copy.unauthorized,
     'organization-required': copy.organizationRequired
   }
+
   const description = descriptions[state.status] ?? state.error ?? actionError
 
   return (
