@@ -16,7 +16,7 @@ export const frSharedMetrics = {
   collectedMachine:
     'Machine : système d’exploitation, plage de RAM, type de GPU, version de Unitalk, utilisation de modèles locaux',
   sending:
-    'Si vous acceptez de partagez vos statistiques d'utilisation elles seront envoyées à Unitalk une fois par jour, avec un identifiant aléatoire associé à votre profil. Aucune statistique antérieure à votre accord ne sera transmise, à l'exception d'une notification unique confirmant l'installation d'Unitalk. Vous pouvez modifier votre choix à tout moment dans les Paramètres.',
+    "Si vous acceptez de partagez vos statistiques d'utilisation elles seront envoyées à Unitalk une fois par jour, avec un identifiant aléatoire associé à votre profil. Aucune statistique antérieure à votre accord ne sera transmise, à l'exception d'une notification unique confirmant l'installation d'Unitalk. Vous pouvez modifier votre choix à tout moment dans les Paramètres.",
   readDocs: 'Lire tous les détails',
   share: 'Partager avec Unitalk',
   off: 'Non merci',

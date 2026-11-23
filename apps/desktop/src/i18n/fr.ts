@@ -988,7 +988,7 @@ export const frOverrides = {
     appearance: {
       chatTextScaleTitle: 'Taille du texte du chat',
       chatTextScaleDesc:
-        'Ajuste la taille du texte des conversations et de la zone de saisie, sans modifier la taille des autres éléments de l'interface.',
+        "Ajuste la taille du texte des conversations et de la zone de saisie, sans modifier la taille des autres éléments de l'interface.",
       title: 'Apparence',
       intro:
         'Exclusif au desktop. Le mode contrôle la luminosité ; le thème contrôle la palette et le chrome de la conversation.',
@@ -1008,7 +1008,7 @@ export const frOverrides = {
       uiScaleTitle: "Échelle de l'interface",
       uiScaleDesc: (percent: number) =>
         `Redimensionne le texte et les éléments de l'interface dans toute l'application. Cmd/Ctrl avec +, - et 0 fonctionne aussi. Taille actuelle : ${percent}%.`,
-      sessionDensityTitle: 'Affichage de l'historique des sessions',
+      sessionDensityTitle: "Affichage de l'historique des sessions",
       sessionDensityDesc:
         'Choisissez le niveau de détail affiché sous les titres de session dans la barre latérale.',
       sessionDensityCompact: 'Compacte',
@@ -1022,12 +1022,12 @@ export const frOverrides = {
       tabStripNever: 'Jamais',
       appActionsTitle: "Position des boutons de l'application",
       appActionsDesc:
-        'Choisissez d'afficher les boutons Paramètres, Disposition et HUD à gauche ou à droite de la barre supérieure.',
+        "Choisissez d'afficher les boutons Paramètres, Disposition et HUD à gauche ou à droite de la barre supérieure.",
       appActionsLeft: 'À gauche',
       appActionsRight: 'À droite',
       terminalFontTitle: 'Police du terminal',
       terminalFontDesc:
-        'Choisissez la police d'écriture utilisée pour les terminaux Desktop. Les Nerd Fonts affichent correctement Powerlevel10k et les icônes du shell ; laissez vide pour utiliser JetBrains Mono intégré.',
+        "Choisissez la police d'écriture utilisée pour les terminaux Desktop. Les Nerd Fonts affichent correctement Powerlevel10k et les icônes du shell ; laissez vide pour utiliser JetBrains Mono intégré.",
       terminalFontPlaceholder: 'MesloLGS NF ou une pile de polices CSS',
       terminalFontPreview: 'Aperçu des glyphes',
       terminalFontReset: 'Utiliser la valeur par défaut',
@@ -1092,7 +1092,7 @@ export const frOverrides = {
         "Des cœurs flottants apparaissent lorsque vous dites merci, « je t'aime », « good bot » ou envoyez un cœur. Cette option est indépendante des réactions aux messages ci-dessus.",
       embedsTitle: 'Intégrations en ligne',
       embedsDesc:
-        "Les aperçus enrichis se chargent depuis des sites tiers (YouTube, X, …). Avec "Demander" votre autorisation est requise avant de charger chaque aperçu. Toujours les charge automatiquement ; Désactivé conserve les liens simples.",
+        'Les aperçus enrichis se chargent depuis des sites tiers (YouTube, X, …). Avec "Demander" votre autorisation est requise avant de charger chaque aperçu. Toujours les charge automatiquement ; Désactivé conserve les liens simples.',
       embedsAsk: 'Demander',
       embedsAlways: 'Toujours',
       embedsOff: 'Désactivé',
@@ -1336,7 +1336,7 @@ export const frOverrides = {
     fieldDescriptions: defineFieldCopy({
       model: 'Utilisé pour les nouvelles conversations sauf si vous choisissez un autre modèle dans le prompt.',
       modelContextLength:
-        'Laissez 0 pour utiliser la fenêtre de contexte par défaut du modèle ou saisissez une valeur personnalisée (en tokens). Ce réglage s'applique uniquement au modèle principal, pas aux modèles auxiliaires ni au Mixture of Agents (MOA).',
+        "Laissez 0 pour utiliser la fenêtre de contexte par défaut du modèle ou saisissez une valeur personnalisée (en tokens). Ce réglage s'applique uniquement au modèle principal, pas aux modèles auxiliaires ni au Mixture of Agents (MOA).",
       fallbackProviders: 'Si votre modèle principal est indisponible ou ne répond pas, votre collaborateur IA bascule automatiquement sur un modèle de secours.',
       display: {
         personality: "Style par défaut de l'assistant pour les nouvelles sessions.",
@@ -1368,7 +1368,7 @@ export const frOverrides = {
       codeExecution: {
         mode: "Degré de restriction de l'exécution du code au projet actuel."
       },
-      fileReadMaxChars: 'Nombre maximal de caractères qu'Unitalk peut lire dans une demande de fichier.',
+      fileReadMaxChars: "Nombre maximal de caractères qu'Unitalk peut lire dans une demande de fichier.",
       approvals: {
         mode: 'Comment Unitalk gère les commandes nécessitant une approbation explicite.',
         timeout: "Durée d'attente des prompts d'approbation avant expiration."
@@ -1387,7 +1387,7 @@ export const frOverrides = {
         engine: 'Stratégie pour gérer les longues conversations lorsque la limite de contexte du modèle IA est presque atteinte.'
       },
       compression: {
-        enabled: 'Résume automatiquement les échanges précédents lorsque la conversation devient trop longue, afin de libérer de l'espace dans la fenêtre de contexte.',
+        enabled: "Résume automatiquement les échanges précédents lorsque la conversation devient trop longue, afin de libérer de l'espace dans la fenêtre de contexte.",
         codexGpt55Autoraise: 'Relever la compression à 85 % pour les modèles ChatGPT Codex OAuth pris en charge.'
       },
       auxiliary: {
@@ -4813,7 +4813,7 @@ export const frOverrides = {
   },
   interfaceMode: {
     title: 'Mode d’interface',
-    hint: 'Modifie ce qui est affiché, pas les fonctionnalités d'Unitalk.',
+    hint: "Modifie ce qui est affiché, pas les fonctionnalités d'Unitalk.",
     sessionNote:
       'Défini par le mode Simple. Une modification ici dure le temps de cette session ; passez en mode Avancé pour la conserver.',
     simple: {
