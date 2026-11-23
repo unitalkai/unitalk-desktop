@@ -8,9 +8,9 @@ Key design decisions made for the Unitalk Desktop fork, with reasoning. Each dec
 
 **Decision**: The AI entity in the system prompt is called "AI Collaborator" rather than "Agent".
 
-**Reasoning**: The identity line in `DEFAULT_AGENT_IDENTITY` is a placeholder. When users personalize their AI (during onboarding, the "name" beat), this string is replaced with the user-chosen name. "AI Collaborator" is a descriptive, professional fallback that works before personalization and conveys partnership without the technical baggage of "agent". "Agent" implies tool-execution primacy; "Collaborator" implies conversation and assistance — which matches Unitalk's target audience of pro users who want an AI partner, not a CLI tool runner.
+**Reasoning**: "AI collaborator" conveys partnership without implying tool-execution primacy. The default acknowledges Unitalk AI as its creator and Hermes Agent as the underlying harness.
 
-**Constraint**: Must remain syntactically compatible with the upstream's identity-line substitution (`S_O_U_L.md` file or custom persona replacing this line). The upstream expects the pattern `"You are <name>, built by <company>."` — we keep this structure intact.
+**Constraint**: A custom `SOUL.md` replaces the default identity. Keep the seeded and fallback defaults aligned.
 
 ---
 

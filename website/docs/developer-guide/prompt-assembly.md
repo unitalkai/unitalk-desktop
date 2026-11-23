@@ -61,7 +61,7 @@ keyed on the skill files' signatures, so a change written by another process is 
 itself converges at the next rebuild boundary (compaction). Legacy prompts retain their original
 host-before-context anchor, so prompts persisted before the reorder still validate.
 
-When `skip_context_files` is set (e.g., subagent delegation), SOUL.md is not loaded and the hardcoded `DEFAULT_AGENT_IDENTITY` is used instead.
+When `skip_context_files` is set (e.g., subagent delegation), SOUL.md is not loaded and the built-in `DEFAULT_AGENT_IDENTITY` is used instead.
 
 ### Concrete example: assembled system prompt
 
@@ -199,22 +199,11 @@ def load_soul_md() -> Optional[str]:
     return content
 ```
 
-When `load_soul_md()` returns content, it replaces the hardcoded `DEFAULT_AGENT_IDENTITY`. The `build_context_files_prompt()` function is then called with `skip_soul=True` to prevent SOUL.md from appearing twice (once as identity, once as a context file).
+When `load_soul_md()` returns content, it replaces the built-in `DEFAULT_AGENT_IDENTITY`. The `build_context_files_prompt()` function is then called with `skip_soul=True` to prevent SOUL.md from appearing twice (once as identity, once as a context file).
 
-If `SOUL.md` doesn't exist, the system falls back to:
-
-```
-You are Hermes Agent, built by Nous Research. Be direct: match the length
-of your reply to the weight of the ask — a one-line question gets a
-one-line answer, and finished work gets a short report of what changed,
-what's verified, and what's left, never a replay of the process. No
-filler ("Great question," "I'd be happy to"), no restating the request
-back, no re-summarizing what you already said, no narrating tool calls
-the user can see. Plain claims over adjectives; when unsure, say so
-plainly. Agree because it's right, not because the user said it. Depth
-is earned — give it when the user asks for detail, teaches, or the
-stakes demand it, not by default.
-```
+If `SOUL.md` doesn't exist, the system falls back to the default in
+`hermes_cli/default_soul.py`, which is also seeded into new profiles. It begins:
+"You are an AI collaborator created by Unitalk AI, powered by the Hermes Agent harness."
 
 ## How context files are injected
 

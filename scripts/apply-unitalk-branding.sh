@@ -25,9 +25,9 @@ echo "Root: $ROOT"
 echo ""
 
 # ── SECTION 1: Agent Identity ────────────────────────────────────────────────
-# prompt_builder.py holds DEFAULT_AGENT_IDENTITY — the system prompt's
-# opening identity line. The upstream says "Hermes Agent, built by Nous Research".
-# We replace with "AI Collaborator, built by Unitalk".
+# The current default persona lives in hermes_cli/default_soul.py and is reused by
+# prompt_builder.py. The legacy replacement below only handles older upstream
+# prompt_builder.py versions; merge the full Unitalk persona manually.
 #
 # onboarding_text.py holds GREETING and _GREETINGS — the scripted first-run
 # greeting. The upstream says "I'm Hermes" or references "Hermes".

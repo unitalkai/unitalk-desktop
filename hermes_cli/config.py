@@ -525,7 +525,7 @@ def seed_config_file(config_path: Path, template: Optional[Path] = None) -> bool
 
 
 def _ensure_default_soul_md(home: Path) -> None:
-    """Seed DEFAULT_SOUL_MD on first run; upgrade a legacy comment-only scaffold in place.
+    """Seed DEFAULT_SOUL_MD on first run; upgrade untouched legacy defaults in place.
     A SOUL.md the user actually customized is never touched."""
     soul_path = home / "SOUL.md"
     if soul_path.exists():

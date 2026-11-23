@@ -14,7 +14,7 @@ The rebranding operates on two distinct layers:
 
 ### Why two layers?
 
-The AI entity is called "AI Collaborator" rather than "Agent" because it will be replaced by the **user-chosen name** at runtime. When a user names their AI "Marie", the identity line becomes "You are Marie, built by Unitalk." "Collaborator" is a placeholder — a descriptive fallback before personalization.
+The default identity calls the AI a collaborator and credits Unitalk AI and the Hermes Agent harness. A custom `SOUL.md` can replace this persona.
 
 The product is called "Unitalk" everywhere the user sees it: the app title, onboarding screens, consent dialogs, README.
 
@@ -22,7 +22,7 @@ The product is called "Unitalk" everywhere the user sees it: the app title, onbo
 
 | Pattern | Replacement | Context | Where applied |
 |---|---|---|---|
-| `You are Hermes Agent, built by Nous Research` | `You are an AI Collaborator, built by Unitalk` | Exact match only — the system prompt identity line | `agent/prompt_builder.py` `DEFAULT_AGENT_IDENTITY` |
+| Default identity | `You are an AI collaborator created by Unitalk AI, powered by the Hermes Agent harness.` | Shared seeded and fallback persona | `hermes_cli/default_soul.py` `DEFAULT_SOUL_MD` |
 | `For help with Hermes Agent itself` | `For help with Unitalk AI Collaborator itself` | Help guidance opening — don't touch the skill/docs references that follow | `agent/prompt_builder.py` `HERMES_AGENT_HELP_GUIDANCE` |
 | `I'm Hermes` | `I'm Unitalk` | First-run greeting text | `agent/onboarding_text.py` `GREETING`, `_GREETINGS` |
 | `the Hermes desktop app` | `the Unitalk desktop app` | Comment text referencing the app | `agent/onboarding_text.py` |
@@ -127,11 +127,11 @@ grep -c "export const [a-z]*Theme:" apps/desktop/src/themes/presets.ts
 
 The `GREETING` variable was already `"Hi, I'm Unitalk."` — but the `_GREETINGS` dict had 8 locale-specific translations that each needed to say "Unitalk" instead of "Hermes". A blind `sed 's/Hermes/Unitalk/g'` would have corrupted method names (`hermes_cli` etc.), but a targeted `sed "s/I'm Hermes/I'm Unitalk/g"` only catches the greeting string. **Lesson**: check each locale entry in `_GREETINGS` individually.
 
-### `prompt_builder.py` identity line
+### Default identity
 
-The `DEFAULT_AGENT_IDENTITY` line is a single multi-line string. The original: `"You are Hermes Agent, built by Nous Research."` — replacing "Hermes Agent" with "AI Collaborator" and "Nous Research" with "Unitalk" must happen in a single sed pass, not two, because "Hermes Agent" → "AI Collaborator" followed by "Nous Research" → "Unitalk" could miss the combined "Hermes Agent, built by Nous Research" pattern if done separately.
-
-The fix: replace the full identity line in one pattern, not word-by-word.
+The default persona is defined in `hermes_cli/default_soul.py` and reused as
+`DEFAULT_AGENT_IDENTITY` in `agent/prompt_builder.py`. Keep it aligned with the
+repository and Docker `SOUL.md` files when merging upstream.
 
 ### MCP transport limit
 
