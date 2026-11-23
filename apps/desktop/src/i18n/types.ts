@@ -1532,6 +1532,33 @@ export interface Translations extends NoticeTranslations {
       usage: {
         title: string
       }
+      spend: {
+        spendDetails: string
+        signedOutTitle: string
+        signedOutBody: string
+        period: string
+        to: string
+        model: string
+        allModels: string
+        user: string
+        allUsers: string
+        date: string
+        username: string
+        provider: string
+        type: string
+        tokens: string
+        totalTokens: string
+        inputTokens: string
+        outputTokens: string
+        cacheReadTokens: string
+        credits: string
+        totalCredits: string
+        downloadCsv: string
+        loadingData: string
+        noData: string
+        pageOf: (page: number, totalPages: number, totalCount: number) => string
+        loadFailed: string
+      }
       buyCredits: {
         customAmount: string
         title: string

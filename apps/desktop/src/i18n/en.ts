@@ -736,7 +736,8 @@ export const en: Translations = {
       appUpdates: 'Version & updates',
       uninstall: 'Uninstall',
       billingOverview: 'Overview',
-      billingPlans: 'Plans'
+      billingPlans: 'Plans',
+      billingAiUsage: 'AI usage'
     },
     closeSettings: 'Close settings',
     exportConfig: 'Export config',
@@ -1656,6 +1657,33 @@ export const en: Translations = {
       },
       usage: {
         title: 'Usage'
+      },
+      spend: {
+        spendDetails: 'Spend Details',
+        signedOutTitle: 'Sign in to view AI usage',
+        signedOutBody: 'AI usage belongs to your Unitalk organization. Sign in to see spend details.',
+        period: 'Period',
+        to: 'to',
+        model: 'Model',
+        allModels: 'All models',
+        user: 'User',
+        allUsers: 'All users',
+        date: 'Date',
+        username: 'User',
+        provider: 'Provider',
+        type: 'Type',
+        tokens: 'Tokens',
+        totalTokens: 'Total tokens',
+        inputTokens: 'Input tokens',
+        outputTokens: 'Output tokens',
+        cacheReadTokens: 'Cache read tokens',
+        credits: 'Credits',
+        totalCredits: 'Total Credits',
+        downloadCsv: 'Download CSV',
+        loadingData: 'Loading spend data...',
+        noData: 'No spend data found.',
+        pageOf: (page, totalPages, totalCount) => `Page ${page} of ${totalPages} (${totalCount} records)`,
+        loadFailed: 'Failed to load spend data.'
       },
       buyCredits: {
         customAmount: 'Custom credit amount',

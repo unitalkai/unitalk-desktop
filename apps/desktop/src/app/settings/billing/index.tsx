@@ -32,6 +32,7 @@ import { KeepGoingOnCreditsRow } from './keep-going-on-credits-row'
 import { openExternal } from './open-external'
 import { BillingPlansView } from './plans-view'
 import { createSimulatedBillingApi } from './simulated-api'
+import { SpendSettings } from './spend'
 import type { BillingStateResponse } from './types'
 import {
   type BillingAccountRowView,
@@ -46,7 +47,7 @@ import { useStepUpFlow } from './use-step-up'
 
 // `bview` mirrors the settings pview/kview sub-view pattern (deep-linkable, replace
 // navigation). `overview` is the default landing; `plans` is the in-app catalog.
-export const BILLING_VIEWS = ['overview', 'plans'] as const
+export const BILLING_VIEWS = ['overview', 'spending', 'plans'] as const
 export type BillingSubView = (typeof BILLING_VIEWS)[number]
 
 const FEATURE_BILLING_INVOICES = false
@@ -502,6 +503,10 @@ function BillingSettingsContent({
   // fixture short-circuit here.
   const billingState = useBillingState()
   const subscriptionState = useSubscriptionState()
+
+  if (subView === 'spending') {
+    return <SpendSettings />
+  }
 
   // First load keeps the page's shape via a skeleton instead of flashing "—"
   // summary cards (background refetches leave `isPending` false, so no flicker).

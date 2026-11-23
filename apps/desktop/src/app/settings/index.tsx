@@ -307,11 +307,20 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
             active: activeView === 'billing',
             children: [
               {
-                active: activeView === 'billing' && (billingView === 'overview' || !canViewPlans),
+                active:
+                  activeView === 'billing' &&
+                  (billingView === 'overview' || (billingView === 'plans' && !canViewPlans)),
                 icon: BarChart3,
                 id: 'bview:overview',
                 label: t.settings.subpages.billingOverview,
                 onSelect: () => openSubView('billing', 'bview', 'overview', 'overview')
+              },
+              {
+                active: activeView === 'billing' && billingView === 'spending',
+                icon: BarChart3,
+                id: 'bview:spending',
+                label: t.settings.subpages.billingAiUsage,
+                onSelect: () => openSubView('billing', 'bview', 'spending', 'overview')
               },
               ...(canViewPlans
                 ? [

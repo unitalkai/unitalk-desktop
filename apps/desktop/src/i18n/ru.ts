@@ -343,6 +343,33 @@ export const ruOverrides = {
     memoryLayers: ruMemoryLayers,
     // Window plans (Nous subscription with included usage). Other billing strings: overlay-gaps.json.
     billing: {
+      spend: {
+        spendDetails: 'Детали расходов',
+        signedOutTitle: 'Войдите, чтобы увидеть использование ИИ',
+        signedOutBody: 'Использование ИИ привязано к вашей организации Unitalk. Войдите, чтобы увидеть детали расходов.',
+        period: 'Период',
+        to: 'по',
+        model: 'Модель',
+        allModels: 'Все модели',
+        user: 'Пользователь',
+        allUsers: 'Все пользователи',
+        date: 'Дата',
+        username: 'Пользователь',
+        provider: 'Провайдер',
+        type: 'Тип',
+        tokens: 'Токены',
+        totalTokens: 'Всего токенов',
+        inputTokens: 'Входные токены',
+        outputTokens: 'Выходные токены',
+        cacheReadTokens: 'Токены чтения кэша',
+        credits: 'Кредиты',
+        totalCredits: 'Всего кредитов',
+        downloadCsv: 'Скачать CSV',
+        loadingData: 'Загрузка данных о расходах…',
+        noData: 'Данные о расходах не найдены.',
+        pageOf: (page, totalPages, totalCount) => `Страница ${page} из ${totalPages} (${totalCount} записей)`,
+        loadFailed: 'Не удалось загрузить данные о расходах.'
+      },
       keepGoingOnCredits: {
         title: 'Продолжать за кредиты',
         description: 'Тратить кредиты, когда включённый объём закончится. Выключено: Unitalk ждёт сброса.',
@@ -421,7 +448,8 @@ export const ruOverrides = {
       appUpdates: 'Версия и обновления',
       uninstall: 'Удаление',
       billingOverview: 'Обзор',
-      billingPlans: 'Тарифы'
+      billingPlans: 'Тарифы',
+      billingAiUsage: 'Использование ИИ'
     },
     closeSettings: 'Закрыть настройки',
     exportConfig: 'Экспорт конфигурации',

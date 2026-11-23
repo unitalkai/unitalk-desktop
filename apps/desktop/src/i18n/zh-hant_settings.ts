@@ -67,7 +67,8 @@ export const zhHantSettings = {
       appUpdates: '版本與更新',
       uninstall: '解除安裝',
       billingOverview: '概覽',
-      billingPlans: '方案'
+      billingPlans: '方案',
+      billingAiUsage: 'AI 用量'
     },
     plugins: {
       openFolder: '開啟桌面外掛資料夾',
@@ -1284,6 +1285,33 @@ export const zhHantSettings = {
       deleteFailed: '刪除失敗'
     },
     billing: {
+      spend: {
+        spendDetails: '支出詳情',
+        signedOutTitle: '登入後查看 AI 用量',
+        signedOutBody: 'AI 用量屬於你的 Unitalk 組織。登入後查看支出詳情。',
+        period: '週期',
+        to: '至',
+        model: '模型',
+        allModels: '所有模型',
+        user: '使用者',
+        allUsers: '所有使用者',
+        date: '日期',
+        username: '使用者',
+        provider: '供應商',
+        type: '類型',
+        tokens: '詞元',
+        totalTokens: '總詞元',
+        inputTokens: '輸入詞元',
+        outputTokens: '輸出詞元',
+        cacheReadTokens: '快取讀取詞元',
+        credits: '額度',
+        totalCredits: '總額度',
+        downloadCsv: '下載 CSV',
+        loadingData: '正在載入支出資料…',
+        noData: '找不到支出資料。',
+        pageOf: (page, totalPages, totalCount) => `第 ${page} 頁，共 ${totalPages} 頁（${totalCount} 筆記錄）`,
+        loadFailed: '載入支出資料失敗。'
+      },
       perMonth: amount => `${amount}/月`,
       creditsPerMonth: amount => `${amount} 額度/月`,
       usageLabel: label => `${label}用量`,
