@@ -101,13 +101,7 @@ export const introFr: Translations['intro'] = {
       'Décris la tâche. Je fonce dans les fichiers, j’écrase les tests en échec et je laisse un commit qui DÉCHIRE. Go go go.',
       'Petite coquille ou gros refactoring — peu importe. Je livre du code propre aujourd’hui. Donne la tâche et au BOULOT.'
     ],
-    none: [
-      'Confiez une mission à votre Collaborateur IA, posez une question ou partagez un document. Je m’adapte aux méthodes de votre entreprise.',
-      'Décrivez la tâche avec vos propres mots. Je choisis les bons outils, j’explique mon plan et je vérifie avant les étapes risquées.',
-      'Déposez un chemin de fichier, une trace d’erreur ou une idée approximative. J’enquête, je suggère les prochaines étapes et je garde tout réversible.',
-      'Explorez le dépôt, modifiez des fichiers, lancez des tests, ouvrez des PR. Dites-moi l’objectif et je m’occupe des détails techniques.',
-      'Tapez une tâche, une question ou un extrait. Je me souviens de la session, je cite mes sources et je demande confirmation quand je ne suis pas sûr.'
-    ]
+    none: ['Sur quoi travaille-t-on?']
   },
   custom: label => [
     'Envoyez une tâche, un fichier ou une idée. Je suivrai la voix configurée et resterai fidèle à la réalité du dépôt.',
