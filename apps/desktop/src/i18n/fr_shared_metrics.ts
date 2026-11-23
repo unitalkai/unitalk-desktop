@@ -16,14 +16,14 @@ export const frSharedMetrics = {
   collectedMachine:
     'Machine : système d’exploitation, plage de RAM, type de GPU, version de Unitalk, utilisation de modèles locaux',
   sending:
-    'Si vous partagez, Unitalk envoie les statistiques à Unitalk une fois par jour avec un identifiant aléatoire propre à ce profil. Hormis une note unique indiquant que Unitalk a été installé, les statistiques d’avant votre accord ne sont jamais envoyées. Modifiez ce choix à tout moment dans les Paramètres.',
+    'Si vous acceptez de partagez vos statistiques d'utilisation elles seront envoyées à Unitalk une fois par jour, avec un identifiant aléatoire associé à votre profil. Aucune statistique antérieure à votre accord ne sera transmise, à l'exception d'une notification unique confirmant l'installation d'Unitalk. Vous pouvez modifier votre choix à tout moment dans les Paramètres.',
   readDocs: 'Lire tous les détails',
   share: 'Partager avec Unitalk',
   off: 'Non merci',
   saveFailed: 'Impossible d’enregistrer votre choix',
   sendLabel: 'Partager les statistiques d’utilisation avec Unitalk',
   sendDesc:
-    'Uniquement des comptages, envoyés une fois par jour avec un identifiant aléatoire pour ce profil. Jamais vos messages, fichiers, chemins ni textes d’erreur.',
+    'Seules des données de comptage sont transmises une fois par jour avec un identifiant aléatoire associé à votre profil. Jamais vos messages, fichiers, chemins ni messages d’erreur.',
   unavailable: 'Mettez à jour le backend Unitalk pour modifier ce réglage.',
   stripBody: 'Uniquement des comptages. Jamais vos messages ni vos fichiers.',
   stripReaskBody:
