@@ -1,4 +1,7 @@
 name: knowledge-base
-version: 0.1.0
-description: "Qdrant-backed knowledge bases for Unitalk collaborators: Settings routes and agent retrieval."
+version: 0.2.0
+description: "Unitalk knowledge bases served by Convex: the Desktop Capabilities tab backend plus knowledge_search and knowledge_list_bases agent tools."
 author: Unitalk
+provides_tools:
+  - knowledge_search
+  - knowledge_list_bases

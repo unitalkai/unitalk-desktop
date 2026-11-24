@@ -349,6 +349,7 @@ are fixed verbs, not a Clerk passthrough.
 ```ts
 host.clerk.snapshot // ReadableAtom<ClerkSessionSnapshot>
 host.clerk.getToken() // fresh short-lived Clerk session JWT (rejects while Clerk is not ready)
+host.clerk.getSessionCredentials() // { sessionId, clientToken, frontendApi, organizationId } | null (Electron only)
 host.clerk.setActiveOrganization(orgId | null) // null = personal account
 host.clerk.createOrganization({ name, slug? })
 host.clerk.refresh()
@@ -359,6 +360,18 @@ The bridge switches the Clerk session, refreshes the token, re-submits it to
 the backend for the window's active profile, and keeps other open windows in
 sync. Feature-detect `host.clerk` when a plugin can also run on an older
 Desktop build.
+
+`getSessionCredentials()` is for a plugin whose **backend** must keep calling
+Unitalk services on the user's behalf when the window is idle or closed (an
+agent tool, for example). The backend stores the credentials and mints its own
+fresh session JWTs from Clerk's Frontend API
+(`POST {frontendApi}/v1/client/sessions/{sessionId}/tokens?_is_native=1` with
+`Authorization: Bearer {clientToken}`) for as long as the Clerk session lives;
+signing out or revoking the session ends it. `clientToken` is the native client
+token `@clerk/electron` keeps encrypted at rest: send it only to your own plugin
+backend, store it owner-readable only, and never log it. It is `null` outside
+Electron (the browser-hosted Webapp authenticates with cookies) and when signed
+out. The knowledge-base plugin is the reference user.
 
 ### Status bar and title bar
 

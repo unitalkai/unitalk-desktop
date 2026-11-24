@@ -1,9 +1,9 @@
 {
   "name": "knowledge-base",
   "label": "Knowledge Base",
-  "description": "Qdrant knowledge bases backend for the Settings knowledge base menu.",
+  "description": "Unitalk knowledge bases backend for the Desktop Capabilities Knowledge base tab.",
   "icon": "Database",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "tab": {
     "hidden": true
   },
