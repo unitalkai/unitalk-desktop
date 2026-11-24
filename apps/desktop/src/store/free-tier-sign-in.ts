@@ -111,7 +111,7 @@ const fail = (kind: FreeTierSignInFailure, message: null | string = null, retryA
   })
 }
 
-/** Every entry point calls this — Settings › Billing, the statusbar chip, the
+/** Every entry point calls this — Settings › Billing, the
  *  first-launch intro. It only records the intent; the mounted host owns the
  *  gateway requester and drives the flow. Re-entrant by design: a second click
  *  while a sign-in is already on screen must not restart it. */
