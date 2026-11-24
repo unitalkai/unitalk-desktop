@@ -102,7 +102,7 @@ Follow [the group contract](../docs/canonical-groups.md): offer a control only w
 its method, send only what the generated contract declares, never fall back to classic execution,
 and give a Send's words back only on the gateway's `admitted: false` proof.
 
-## Free tier surfaces (`src/store/free-tier*.ts`, Billing, statusbar chip, onboarding ready screen)
+## Free tier surfaces (`src/store/free-tier*.ts`, Billing, onboarding ready screen)
 
 `$freeTierStatus` mirrors `free_tier.status` (pull; refreshed with the status snapshot and after a
 sign-in). `deriveBillingView` branches on `billing.free_tier_account` BEFORE `logged_in` (status

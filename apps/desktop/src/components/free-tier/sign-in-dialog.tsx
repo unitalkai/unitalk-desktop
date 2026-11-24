@@ -55,7 +55,7 @@ interface FreeTierSignInDialogProps {
 
 /**
  * The one sign-in surface for the free tier. Every entry point (Settings ›
- * Billing, the statusbar chip, the first-launch intro) calls
+ * Billing, the first-launch intro) calls
  * `openFreeTierSignIn()`; this host owns the gateway requester, drives the
  * transfer, and paints one screen per state.
  *

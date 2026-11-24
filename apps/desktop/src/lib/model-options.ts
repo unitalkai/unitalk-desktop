@@ -7,7 +7,7 @@ type CatalogProviderIdentity = Partial<Pick<ModelOptionProvider, 'aliases' | 'na
 
 /** UI-only curation: keep the full catalog available for current-session capabilities. */
 export function isModelPickerProviderVisible(provider: Pick<ModelOptionProvider, 'slug'>): boolean {
-  return provider.slug !== 'openai-api'
+  return provider.slug === 'unitalk'
 }
 
 /** True when `currentProvider` is this catalog row — slug, display name, or

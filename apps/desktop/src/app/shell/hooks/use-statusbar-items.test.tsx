@@ -388,10 +388,7 @@ describe('useStatusbarItems session timer — runtime cache anchor', () => {
   })
 })
 
-// The statusbar chip is a free-tier user's standing way in to a sign-in, and
-// an interface mode decides whether the bar is mounted at all. Whatever a mode
-// rests, a signed-out free-tier user keeps one visible Sign in.
-describe('free-tier Sign in in every interface mode', () => {
+describe('statusbar without the free-tier sign-in chip', () => {
   const freeTier = (available: boolean): FreeTierStatus => ({
     available,
     enabled: true,
@@ -401,13 +398,6 @@ describe('free-tier Sign in in every interface mode', () => {
     notice_pending: false
   })
 
-  function signInChipVisible(): boolean {
-    const { leftStatusbarItems, statusbarItems } = renderStatusbarItems()
-    const chip = [...leftStatusbarItems, ...statusbarItems].find(item => item.id === 'free-tier')
-
-    return $statusbarVisible.get() && chip !== undefined && !chip.hidden
-  }
-
   beforeEach(() => markOnboardingDecided())
 
   afterEach(() => {
@@ -416,39 +406,33 @@ describe('free-tier Sign in in every interface mode', () => {
     setInterfaceMode('advanced')
   })
 
-  it.each(INTERFACE_MODES)('shows the Sign in chip to a signed-out free-tier user in %s mode', mode => {
+  it.each(INTERFACE_MODES)('keeps the sign-in chip off the bar in %s mode', mode => {
     setInterfaceMode(mode)
     $freeTierStatus.set(freeTier(true))
 
-    expect(signInChipVisible()).toBe(true)
+    const { leftStatusbarItems, statusbarItems } = renderStatusbarItems()
+
+    expect([...leftStatusbarItems, ...statusbarItems].find(item => item.id === 'free-tier')).toBeUndefined()
+    expect(leftStatusbarItems.find(item => item.id === 'gateway-health')?.hidden).toBeFalsy()
   })
 
-  it('lets Simple rest the bar again once the user has signed in', () => {
-    setInterfaceMode('simple')
-    $freeTierStatus.set(freeTier(true))
-    expect($statusbarVisible.get()).toBe(true)
-
-    $freeTierStatus.set(freeTier(false))
-    expect($statusbarVisible.get()).toBe(false)
-  })
-
-  it('shows the chip to a guest with connected apps but no trial, without the free model', () => {
+  it('keeps the chip off the bar for an identity with connected apps but no trial', () => {
     $freeTierStatus.set({ ...freeTier(false), has_guest: true })
 
     const { leftStatusbarItems, statusbarItems } = renderStatusbarItems()
-    const chip = [...leftStatusbarItems, ...statusbarItems].find(item => item.id === 'free-tier')
-
-    expect(signInChipVisible()).toBe(true)
-    expect(chip?.title).toBe('Nous')
+    expect([...leftStatusbarItems, ...statusbarItems].find(item => item.id === 'free-tier')).toBeUndefined()
   })
 
-  it('holds the chip while onboarding is open and brings it back after', () => {
+  it('rests the bar in Simple mode except during onboarding', () => {
+    setInterfaceMode('simple')
     $freeTierStatus.set(freeTier(true))
+    expect($statusbarVisible.get()).toBe(false)
+
     setOnboardingSurfaceActive('onboarding', true)
-    expect(signInChipVisible()).toBe(false)
+    expect($statusbarVisible.get()).toBe(true)
 
     setOnboardingSurfaceActive('onboarding', false)
-    expect(signInChipVisible()).toBe(true)
+    expect($statusbarVisible.get()).toBe(false)
   })
 })
 

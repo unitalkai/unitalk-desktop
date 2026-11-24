@@ -1,8 +1,7 @@
-import { atom, computed } from 'nanostores'
+import { atom } from 'nanostores'
 
 import { runFreeTierChallenge } from '@/store/free-tier-challenge'
-import { setModeContext } from '@/store/interface-mode'
-import { $onboardingSurfaceClear, onboardingSurfaceActive } from '@/store/onboarding-presence'
+import { onboardingSurfaceActive } from '@/store/onboarding-presence'
 import type { FreeTierStatus } from '@/types/hermes'
 
 /** The model the free-tier route runs on. Used to recognise a session that is
@@ -16,28 +15,13 @@ export type FreeTierRequester = <T = unknown>(method: string, params?: Record<st
 
 /**
  * The backend's free-tier verdict, cached for the chrome that paints it (the
- * statusbar chip, the first-launch intro, the billing view). The backend is
+ * first-launch intro and the billing view). The backend is
  * authoritative — this atom is only a cache of `free_tier.status`, which is a
  * local, zero-network read — so nothing here ever decides on its own that the
  * free tier is on or off. `null` means "not asked yet"; every consumer must
  * render as if there were no free tier until an answer lands.
  */
 export const $freeTierStatus = atom<FreeTierStatus | null>(null)
-
-/**
- * A signed-out user who should see the standing Sign in: the free tier is on
- * with an identity (`available`), or a guest identity holds connected apps
- * without the trial (`has_guest`). A sign-in replaces the identity, so both read
- * false afterwards. First-run onboarding must not own the moment. The statusbar
- * chip shows on it, and Simple mode keeps the statusbar up on it.
- */
-export const $freeTierSignInOpen = computed(
-  [$freeTierStatus, $onboardingSurfaceClear],
-  (status, clear) => Boolean(status?.available || status?.has_guest) && clear
-)
-
-// Fed here, beside the atom, so every importer of this store gets the same link.
-$freeTierSignInOpen.subscribe(open => setModeContext({ freeTierSignInOpen: open }))
 
 function isFreeTierStatus(value: unknown): value is FreeTierStatus {
   return typeof value === 'object' && value !== null && typeof (value as FreeTierStatus).has_guest === 'boolean'

@@ -32,6 +32,11 @@ export const ruOverrides = {
     lookupFailed: "Не удалось найти эту группу на шлюзе. Попробуйте ещё раз.",
     missing: "Этот групповой чат больше не существует."
   },
+  intro: {
+    stock: {
+      none: ['Над чем будем работать?']
+    }
+  },
   catalog: ruCatalog,
   connectors: ruConnectors.connectors,
   sharedMetrics: ruSharedMetrics,

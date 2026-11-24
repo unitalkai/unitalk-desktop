@@ -18,6 +18,7 @@ from typing import Any, Dict, Optional
 from hermes_constants import (
     get_hermes_home, get_scratch_dir, get_skills_dir, is_wsl, reset_hermes_home_override, set_hermes_home_override,
 )
+from hermes_cli.default_soul import DEFAULT_SOUL_MD
 
 from agent.model_metadata import CHARS_PER_TOKEN
 from agent.runtime_cwd import resolve_agent_cwd
@@ -157,16 +158,7 @@ def _strip_yaml_frontmatter(content: str) -> str:
     return (content[end + 4:].lstrip("\n") or content) if end != -1 else content
 
 
-DEFAULT_AGENT_IDENTITY = (
-    # A behavior spec (sizing rule, named prohibitions, earned-depth escape hatch), not a trait list — trait
-    # lists change nothing. Maintainer rule: models UNDER-explore by default; never re-add an exploration-thrift line.
-    "You are an AI Collaborator, built by Unitalk. Be direct: match the length of your reply to the weight of the ask "
-    "— a one-line question gets a one-line answer, and finished work gets a short report of what changed, what's "
-    "verified, and what's left, never a replay of the process. No filler (\"Great question,\" \"I'd be happy to\"), no "
-    "restating the request back, no re-summarizing what you already said, no narrating tool calls the user can see. "
-    "Plain claims over adjectives; when unsure, say so plainly. Agree because it's right, not because the user said "
-    "it. Depth is earned — give it when the user asks for detail, teaches, or the stakes demand it, not by default."
-)
+DEFAULT_AGENT_IDENTITY = DEFAULT_SOUL_MD
 
 HERMES_AGENT_HELP_GUIDANCE = (
     # Injected only when skill_view exists AND the hermes-agent skill is installed (system_prompt.py slot
