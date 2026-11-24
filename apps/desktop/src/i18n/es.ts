@@ -746,7 +746,8 @@ export const esOverrides = {
       uninstall: 'Desinstalar',
       billingOverview: 'Resumen',
       billingPlans: 'Planes',
-      billingAiUsage: 'Uso de IA'
+      billingAiUsage: 'Uso de IA',
+      billingMySubscription: 'Mi suscripción'
     },
     closeSettings: 'Cerrar configuración',
     exportConfig: 'Exportar configuración',
@@ -1938,6 +1939,7 @@ export const esOverrides = {
     model: esModelSettings,
     localModels: esLocalModels,
     billing: {
+      portalUnavailable: 'El portal de facturación no está disponible en este momento',
       spend: {
         spendDetails: 'Detalles de gasto',
         signedOutTitle: 'Inicia sesión para ver el uso de IA',

@@ -743,7 +743,8 @@ export const frOverrides = {
       uninstall: 'Désinstaller',
       billingOverview: "Vue d'ensemble",
       billingPlans: 'Forfaits',
-      billingAiUsage: "Utilisation de l'IA"
+      billingAiUsage: "Utilisation de l'IA",
+      billingMySubscription: 'Mon abonnement'
     },
     closeSettings: 'Fermer les paramètres',
     exportConfig: 'Exporter la configuration',
@@ -1950,6 +1951,7 @@ export const frOverrides = {
     model: frModelSettings,
     localModels: frLocalModels,
     billing: {
+      portalUnavailable: 'Le portail de facturation est indisponible pour le moment',
       spend: {
         spendDetails: 'Détails des dépenses',
         signedOutTitle: "Connectez-vous pour voir l'utilisation de l'IA",

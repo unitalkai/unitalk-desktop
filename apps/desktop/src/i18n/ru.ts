@@ -343,6 +343,7 @@ export const ruOverrides = {
     memoryLayers: ruMemoryLayers,
     // Window plans (Nous subscription with included usage). Other billing strings: overlay-gaps.json.
     billing: {
+      portalUnavailable: 'Платёжный портал сейчас недоступен',
       spend: {
         spendDetails: 'Детали расходов',
         signedOutTitle: 'Войдите, чтобы увидеть использование ИИ',
@@ -449,7 +450,8 @@ export const ruOverrides = {
       uninstall: 'Удаление',
       billingOverview: 'Обзор',
       billingPlans: 'Тарифы',
-      billingAiUsage: 'Использование ИИ'
+      billingAiUsage: 'Использование ИИ',
+      billingMySubscription: 'Моя подписка'
     },
     closeSettings: 'Закрыть настройки',
     exportConfig: 'Экспорт конфигурации',

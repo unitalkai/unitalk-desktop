@@ -68,7 +68,8 @@ export const zhHantSettings = {
       uninstall: '解除安裝',
       billingOverview: '概覽',
       billingPlans: '方案',
-      billingAiUsage: 'AI 用量'
+      billingAiUsage: 'AI 用量',
+      billingMySubscription: '我的訂閱'
     },
     plugins: {
       openFolder: '開啟桌面外掛資料夾',
@@ -1285,6 +1286,7 @@ export const zhHantSettings = {
       deleteFailed: '刪除失敗'
     },
     billing: {
+      portalUnavailable: '帳單入口目前無法使用',
       spend: {
         spendDetails: '支出詳情',
         signedOutTitle: '登入後查看 AI 用量',

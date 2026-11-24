@@ -737,7 +737,8 @@ export const en: Translations = {
       uninstall: 'Uninstall',
       billingOverview: 'Overview',
       billingPlans: 'Plans',
-      billingAiUsage: 'AI usage'
+      billingAiUsage: 'AI usage',
+      billingMySubscription: 'My subscription'
     },
     closeSettings: 'Close settings',
     exportConfig: 'Export config',
@@ -1588,6 +1589,7 @@ export const en: Translations = {
     model: enModelSettings,
     localModels: enLocalModels,
     billing: {
+      portalUnavailable: 'Billing portal is unavailable right now',
       perMonth: amount => `${amount}/mo`,
       creditsPerMonth: amount => `${amount} credits/mo`,
       usageLabel: label => `${label} usage`,

@@ -48,7 +48,9 @@ import { OverlayView } from '../overlays/overlay-view'
 import { AboutSettings } from './about-settings'
 import { AppearanceSettings } from './appearance-settings'
 import { BILLING_VIEWS, BillingSettings, type BillingSubView } from './billing'
-import { deriveBillingView, useBillingState, useSubscriptionState } from './billing/use-billing-state'
+import { billingNavChildren, UNITALK_PRICING_URL } from './billing-nav'
+import { openExternal } from './billing/open-external'
+import { useBillingPortal } from './billing/use-billing-portal'
 import { ConfigSettings } from './config-settings'
 import { SECTIONS } from './constants'
 import { GatewaySettings } from './gateway-settings'
@@ -171,10 +173,7 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
   const [providerView, setProviderView] = useRouteEnumParam<ProviderView>('pview', PROVIDER_VIEWS, 'accounts')
   const [keysView] = useRouteEnumParam<KeysView>('kview', KEYS_VIEWS, 'tools')
   const [billingView] = useRouteEnumParam<BillingSubView>('bview', BILLING_VIEWS, 'overview')
-  const billingState = useBillingState()
-  const subscriptionState = useSubscriptionState()
-  const billingPresentation = deriveBillingView(billingState.data, subscriptionState.data)
-  const canViewPlans = billingPresentation.status === 'normal' && Boolean(billingPresentation.plan?.action)
+  const { openPortal: openBillingPortal } = useBillingPortal(activeView === 'billing')
 
   // Jump to a section + its sub-view in one navigate. Two sequential setters
   // would each read the same stale `search` and the second would clobber the
@@ -305,39 +304,22 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
           },
           {
             active: activeView === 'billing',
-            children: [
-              {
-                active:
-                  activeView === 'billing' &&
-                  (billingView === 'overview' || (billingView === 'plans' && !canViewPlans)),
-                icon: BarChart3,
-                id: 'bview:overview',
-                label: t.settings.subpages.billingOverview,
-                onSelect: () => openSubView('billing', 'bview', 'overview', 'overview')
+            children: billingNavChildren({
+              billingView,
+              copy: {
+                aiUsage: t.settings.subpages.billingAiUsage,
+                mySubscription: t.settings.subpages.billingMySubscription,
+                plans: t.settings.subpages.billingPlans
               },
-              {
-                active: activeView === 'billing' && billingView === 'spending',
-                icon: BarChart3,
-                id: 'bview:spending',
-                label: t.settings.subpages.billingAiUsage,
-                onSelect: () => openSubView('billing', 'bview', 'spending', 'overview')
-              },
-              ...(canViewPlans
-                ? [
-                    {
-                      active: activeView === 'billing' && billingView === 'plans',
-                      icon: BarChart3,
-                      id: 'bview:plans',
-                      label: t.settings.subpages.billingPlans,
-                      onSelect: () => openSubView('billing', 'bview', 'plans', 'overview')
-                    }
-                  ]
-                : [])
-            ],
+              isBillingActive: activeView === 'billing',
+              onOpenAiUsage: () => openSubView('billing', 'bview', 'spending', 'overview'),
+              onOpenPlans: () => openExternal(UNITALK_PRICING_URL),
+              onOpenSubscription: openBillingPortal
+            }),
             icon: BarChart3,
             id: 'billing',
             label: t.settings.nav.billing,
-            onSelect: () => setActiveView('billing')
+            onSelect: () => openSubView('billing', 'bview', 'spending', 'overview')
           },
           {
             active: activeView === 'providers',
@@ -479,7 +461,6 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
     [
       activeView,
       billingView,
-      canViewPlans,
       keysView,
       plugins,
       providerView,
@@ -490,7 +471,8 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
       openProviderView,
       openKeysView,
       openSettingsPage,
-      openSubView
+      openSubView,
+      openBillingPortal
     ]
   )
 

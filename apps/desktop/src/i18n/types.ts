@@ -1466,6 +1466,7 @@ export interface Translations extends NoticeTranslations {
       deleteFailed: string
     }
     billing: {
+      portalUnavailable: string
       perMonth: (amount: string) => string
       creditsPerMonth: (amount: string) => string
       usageLabel: (label: string) => string

@@ -255,6 +255,7 @@ export const jaOverrides = {
     memoryLayers: jaMemoryLayers,
     // Window plans (Nous subscription with included usage). Other billing strings: overlay-gaps.json.
     billing: {
+      portalUnavailable: '現在、請求ポータルを利用できません',
       spend: {
         spendDetails: '支出の詳細',
         signedOutTitle: 'AI利用状況を表示するにはサインインしてください',
@@ -392,7 +393,8 @@ export const jaOverrides = {
       uninstall: 'アンインストール',
       billingOverview: '概要',
       billingPlans: 'プラン',
-      billingAiUsage: 'AI利用状況'
+      billingAiUsage: 'AI利用状況',
+      billingMySubscription: 'マイサブスクリプション'
     },
     plugins: jaPluginSettings.plugins,
     closeSettings: '設定を閉じる',

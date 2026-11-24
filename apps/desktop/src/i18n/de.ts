@@ -743,7 +743,8 @@ export const deOverrides = {
       uninstall: 'Deinstallieren',
       billingOverview: 'Übersicht',
       billingPlans: 'Tarife',
-      billingAiUsage: 'KI-Nutzung'
+      billingAiUsage: 'KI-Nutzung',
+      billingMySubscription: 'Mein Abonnement'
     },
     closeSettings: 'Einstellungen schließen',
     exportConfig: 'Konfiguration exportieren',
@@ -1945,6 +1946,7 @@ export const deOverrides = {
     model: deModelSettings,
     localModels: deLocalModels,
     billing: {
+      portalUnavailable: 'Das Abrechnungsportal ist derzeit nicht verfügbar',
       spend: {
         spendDetails: 'Ausgabendetails',
         signedOutTitle: 'Melde dich an, um die KI-Nutzung zu sehen',

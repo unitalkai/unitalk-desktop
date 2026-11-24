@@ -512,7 +512,8 @@ export const zhOverrides = {
       uninstall: '卸载',
       billingOverview: '概览',
       billingPlans: '套餐',
-      billingAiUsage: 'AI 用量'
+      billingAiUsage: 'AI 用量',
+      billingMySubscription: '我的订阅'
     },
     closeSettings: '关闭设置',
     exportConfig: '导出配置',
@@ -1608,6 +1609,7 @@ export const zhOverrides = {
     model: zhModelSettings,
     localModels: zhLocalModels,
     billing: {
+      portalUnavailable: '账单门户暂时不可用',
       spend: {
         spendDetails: '支出详情',
         signedOutTitle: '登录后查看 AI 用量',

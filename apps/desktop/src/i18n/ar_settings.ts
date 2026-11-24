@@ -17,6 +17,7 @@ export const arSettings = {
     memoryLayers: arMemoryLayers,
     // Window plans (Nous subscription with included usage). Other billing strings: overlay-gaps.json.
     billing: {
+      portalUnavailable: 'بوابة الفوترة غير متاحة الآن',
       spend: {
         spendDetails: 'تفاصيل الإنفاق',
         signedOutTitle: 'سجّل الدخول لعرض استخدام الذكاء الاصطناعي',
@@ -122,7 +123,8 @@ export const arSettings = {
       uninstall: 'إلغاء التثبيت',
       billingOverview: 'نظرة عامة',
       billingPlans: 'الخطط',
-      billingAiUsage: 'استخدام الذكاء الاصطناعي'
+      billingAiUsage: 'استخدام الذكاء الاصطناعي',
+      billingMySubscription: 'اشتراكي'
     },
     closeSettings: 'إغلاق الإعدادات',
     exportConfig: 'تصدير الإعدادات',
