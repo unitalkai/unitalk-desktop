@@ -8,11 +8,76 @@ import { SettingsContent } from '../../primitives'
 
 import { SpendFiltersBar } from './filters'
 import { SpendTable } from './spend-table'
-import type { SpendFilters } from './types'
+import type { SpendFilters, SpendLogEntry } from './types'
+import { useOrgUsers } from './use-org-users'
 import { useSpendLogs } from './use-spend-logs'
-import { getDefaultSpendRange, getUniqueUsers } from './utils'
+import { attachUserEmails, getDefaultSpendRange, getUniqueUsers } from './utils'
 
 const PAGE_SIZE = 50
+
+interface SpendSignedInViewProps {
+  data: SpendLogEntry[]
+  error: null | string
+  filters: SpendFilters
+  isLoading: boolean
+  models: string[]
+  onFilterChange: (patch: Partial<SpendFilters>) => void
+  onPageChange: (page: number) => void
+  page: number
+  totalCount: number
+}
+
+// Clerk hooks only run here: this subtree mounts only once `useSpendLogs`
+// reports a signed-in organization, so the ClerkProvider is always present.
+function SpendSignedInView({
+  data,
+  error,
+  filters,
+  isLoading,
+  models,
+  onFilterChange,
+  onPageChange,
+  page,
+  totalCount
+}: SpendSignedInViewProps) {
+  const { t } = useI18n()
+  const s = t.settings.billing.spend
+  const { emailsById } = useOrgUsers()
+
+  // The gateway sends only Clerk user ids; resolve them to emails so both the
+  // table and the user filter show people instead of ids.
+  const rows = useMemo(() => attachUserEmails(data, emailsById), [data, emailsById])
+  const users = useMemo(() => getUniqueUsers(rows), [rows])
+
+  return (
+    <SettingsContent>
+      <div className="flex flex-col gap-4">
+        <SpendFiltersBar
+          disabled={isLoading}
+          filters={filters}
+          models={models}
+          onChange={onFilterChange}
+          users={users}
+        />
+
+        {error && (
+          <div className="rounded-md bg-destructive/10 px-4 py-3 text-[length:var(--conversation-text-font-size)] text-destructive">
+            {s.loadFailed}
+          </div>
+        )}
+
+        <SpendTable
+          data={rows}
+          isLoading={isLoading}
+          onPageChange={onPageChange}
+          page={page}
+          pageSize={PAGE_SIZE}
+          totalCount={totalCount}
+        />
+      </div>
+    </SettingsContent>
+  )
+}
 
 export function SpendSettings() {
   const { t } = useI18n()
@@ -28,17 +93,17 @@ export function SpendSettings() {
 
   const [page, setPage] = useState(1)
 
-  const { data, totalCount, isLoading, error, needsSignIn } = useSpendLogs({ page, pageSize: PAGE_SIZE, ...filters })
+  const { data, totalCount, isLoading, error, needsSignIn } = useSpendLogs({
+    page,
+    pageSize: PAGE_SIZE,
+    ...filters
+  })
 
-  // Model and user options are derived from the returned rows; the full gateway
-  // model catalog and Clerk member emails remain follow-ups.
   const models = useMemo(
     () =>
       [...new Set(data.map(row => row.model))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
     [data]
   )
-
-  const users = useMemo(() => getUniqueUsers(data), [data])
 
   const handleFilterChange = (patch: Partial<SpendFilters>) => {
     setFilters(current => ({ ...current, ...patch }))
@@ -70,31 +135,16 @@ export function SpendSettings() {
   }
 
   return (
-    <SettingsContent>
-      <div className="flex flex-col gap-4">
-        <SpendFiltersBar
-          disabled={isLoading}
-          filters={filters}
-          models={models}
-          onChange={handleFilterChange}
-          users={users}
-        />
-
-        {error && (
-          <div className="rounded-md bg-destructive/10 px-4 py-3 text-[length:var(--conversation-text-font-size)] text-destructive">
-            {s.loadFailed}
-          </div>
-        )}
-
-        <SpendTable
-          data={data}
-          isLoading={isLoading}
-          onPageChange={setPage}
-          page={page}
-          pageSize={PAGE_SIZE}
-          totalCount={totalCount}
-        />
-      </div>
-    </SettingsContent>
+    <SpendSignedInView
+      data={data}
+      error={error}
+      filters={filters}
+      isLoading={isLoading}
+      models={models}
+      onFilterChange={handleFilterChange}
+      onPageChange={setPage}
+      page={page}
+      totalCount={totalCount}
+    />
   )
 }

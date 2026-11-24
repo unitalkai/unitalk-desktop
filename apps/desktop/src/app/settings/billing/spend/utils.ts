@@ -119,6 +119,33 @@ export function getLogUser(row: SpendLogEntry): string {
   return user || endUser || 'Unknown'
 }
 
+/** Attach Clerk-resolved emails to rows that do not carry one yet. */
+export function attachUserEmails(data: SpendLogEntry[], emailsById: Map<string, string>): SpendLogEntry[] {
+  if (emailsById.size === 0) {
+    return data
+  }
+
+  let changed = false
+
+  const rows = data.map(row => {
+    if (row.user_email?.trim()) {
+      return row
+    }
+
+    const email = emailsById.get(getLogUserKey(row))
+
+    if (!email) {
+      return row
+    }
+
+    changed = true
+
+    return { ...row, user_email: email }
+  })
+
+  return changed ? rows : data
+}
+
 export function getUniqueUsers(data: SpendLogEntry[]): UniqueLogUser[] {
   const seen = new Set<string>()
   const result: UniqueLogUser[] = []
