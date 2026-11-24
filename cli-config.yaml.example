@@ -1871,10 +1871,20 @@ tts:
 #                      # client: always desktop-streamed PCM (detection stays
 #                      #         on the backend).
 
-# Image generation. Each provider plugin reads its own ``image_gen.<name>``
-# block; deepinfra discovers models live from
-# api.deepinfra.com/v1/openai/models filtered by the ``image-gen`` tag —
-# no model id is hardcoded, so retired models disappear automatically.
+# Image generation. The bundled "unitalk" backend (plugins/image_gen/unitalk)
+# routes images through the Unitalk LiteLLM gateway, which proxies FAL and other
+# image models and bills the customer's own UNITALK_API_KEY credits — no FAL_KEY.
+# `model` is what Capabilities → Tools → Image Generation selects.
+# Existing homes receive the same block on boot from scripts/unitalk_apply_defaults.py.
+image_gen:
+  provider: unitalk
+  model: fal_ai/fal-ai/nano-banana-pro
+  max_parallel_requests: 4
+#
+# Each provider plugin reads its own ``image_gen.<name>`` block; deepinfra
+# discovers models live from api.deepinfra.com/v1/openai/models filtered by
+# the ``image-gen`` tag — no model id is hardcoded, so retired models
+# disappear automatically.
 # image_gen:
 #   provider: "deepinfra"
 #   deepinfra:

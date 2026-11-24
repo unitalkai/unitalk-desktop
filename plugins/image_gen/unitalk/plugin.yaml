@@ -1,0 +1,7 @@
+name: unitalk
+version: 1.0.0
+description: "Unitalk image generation backend: FAL and other image models through the Unitalk LiteLLM gateway (OpenAI-compatible /v1/images/generations), billed to the customer's UNITALK_API_KEY credits."
+author: Unitalk
+kind: backend
+requires_env:
+  - UNITALK_API_KEY
