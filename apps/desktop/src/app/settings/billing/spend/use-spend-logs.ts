@@ -6,10 +6,10 @@ import { $clerkSession } from '@/store/clerk-session'
 
 import type { SpendLogEntry, SpendLogsResponse } from './types'
 
-// Hermes Web owns the LiteLLM gateway key, so the Desktop asks it for the
+// unitalk.ai owns the LiteLLM gateway key, so the Desktop asks it for the
 // active organization's spend instead of calling the gateway directly (same
 // contract as the user-panel's team-credits call).
-const SPEND_WEB_BASE = 'https://agent.unitalk.ai'
+const SPEND_WEB_BASE = 'https://unitalk.ai'
 
 export interface SpendLogsQuery {
   page: number

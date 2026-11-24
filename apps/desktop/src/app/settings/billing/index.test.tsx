@@ -134,7 +134,7 @@ describe('BillingSettings', () => {
     expect(await screen.findByText('Spend Details')).toBeTruthy()
     expect(screen.getByText('Period')).toBeTruthy()
     expect(await screen.findByText('No spend data found.')).toBeTruthy()
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('https://agent.unitalk.ai/api/spend?'), {
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('https://unitalk.ai/api/spend?'), {
       headers: { Authorization: 'Bearer test-token' }
     })
   })
