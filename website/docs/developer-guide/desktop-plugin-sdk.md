@@ -348,6 +348,7 @@ are fixed verbs, not a Clerk passthrough.
 
 ```ts
 host.clerk.snapshot // ReadableAtom<ClerkSessionSnapshot>
+host.clerk.getToken() // fresh short-lived Clerk session JWT (rejects while Clerk is not ready)
 host.clerk.setActiveOrganization(orgId | null) // null = personal account
 host.clerk.createOrganization({ name, slug? })
 host.clerk.refresh()

@@ -19,6 +19,12 @@ export const arOverrides = {
     missing: "لم تعد محادثة المجموعة هذه موجودة."
   },
 
+  intro: {
+    stock: {
+      none: ['على ماذا سنعمل؟']
+    }
+  },
+
   catalog: {
     add: 'إضافة',
     added: 'تمت الإضافة',

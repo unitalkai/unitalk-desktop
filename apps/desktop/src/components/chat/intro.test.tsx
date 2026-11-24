@@ -2,7 +2,7 @@ import { act, cleanup, render } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 
 import { I18nProvider, useI18n } from '@/i18n'
-import type { I18nContextValue } from '@/i18n'
+import type { BundledLocale, I18nContextValue } from '@/i18n'
 
 import { Intro } from './intro'
 import stock from './intro-copy.jsonl?raw'
@@ -67,6 +67,29 @@ it('translates every shipped stock body at the same personality and rotation pos
   await act(() => i18n.setLocale('en'))
   rerender(<Fixture personality={entries[0].personality} seed={0} />)
   expect(container.querySelector('[data-slot="aui_intro"] > div > p:last-child')!.textContent).toBe(entries[0].body)
+})
+it('shows the localized default prompt for every bundled locale', async () => {
+  vi.spyOn(Math, 'random').mockReturnValue(0)
+
+  const cases = [
+    ['en', 'What should we work on?'],
+    ['fr', 'Sur quoi travaille-t-on?'],
+    ['de', 'Woran sollen wir arbeiten?'],
+    ['es', '¿En qué vamos a trabajar?'],
+    ['ja', '何に取り組みましょうか？'],
+    ['zh', '我们该做什么？'],
+    ['zh-hant', '我們該做什麼？'],
+    ['ru', 'Над чем будем работать?'],
+    ['ar', 'على ماذا سنعمل؟']
+  ] as const satisfies readonly (readonly [BundledLocale, string])[]
+
+  const { container } = render(<Fixture />)
+  const body = () => container.querySelector('[data-slot="aui_intro"] > div > p:last-child')!.textContent
+
+  for (const [locale, prompt] of cases) {
+    await act(() => i18n.setLocale(locale))
+    expect(body()).toBe(prompt)
+  }
 })
 it('localizes the custom-personality fallback without translating its user-supplied name', async () => {
   vi.spyOn(Math, 'random').mockReturnValue(0)

@@ -101,13 +101,7 @@ export const introDe: Translations['intro'] = {
       'Beschreib die Aufgabe. Ich fege durch die Dateien, zerlege fehlschlagende Tests und hinterlasse einen Commit, der KNALLT. Los, los, los.',
       'Winziger Tippfehler oder riesiges Refactoring – egal. Heute liefere ich sauberen Code. Nenn die Aufgabe und dann wird GEARBEITET.'
     ],
-    none: [
-      'Stellen Sie eine Frage, fügen Sie einen Fehler ein oder zeigen Sie mir ein Repo. Ich kann Code lesen, Tools ausführen und Ihnen beim Ausliefern helfen.',
-      'Beschreiben Sie die Aufgabe in eigenen Worten. Ich wähle die passenden Tools, erkläre meinen Plan und frage vor riskanten Schritten nach.',
-      'Geben Sie einen Dateipfad, einen Traceback oder eine grobe Idee an. Ich untersuche, schlage nächste Schritte vor und halte alles umkehrbar.',
-      'Repo durchsuchen, Dateien bearbeiten, Tests ausführen, PRs öffnen. Nennen Sie das Ziel, und ich übernehme den mechanischen Teil.',
-      'Geben Sie eine Aufgabe, Frage oder ein Snippet ein. Ich merke mir die Sitzung, nenne meine Quellen und frage nach, wenn ich unsicher bin.'
-    ]
+    none: ['Woran sollen wir arbeiten?']
   },
   custom: label => [
     'Senden Sie die Aufgabe, Datei oder grobe Idee. Ich nutze Ihre konfigurierte Stimme und halte die Arbeit nah an diesem Repo.',

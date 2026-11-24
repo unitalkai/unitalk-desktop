@@ -8,7 +8,7 @@ export const frMemoryLayers: MemoryLayersTranslations = {
   builtinMemory: 'la mémoire intégrée seule',
   noProvider: 'Aucun — mémoire intégrée uniquement',
   noProviderDesc:
-    'Unitalk utilise uniquement la couche intégrée ci-dessous. Choisissez un fournisseur externe dans Réglages › Mémoire et contexte pour en ajouter un.',
+    'Unitalk utilise uniquement la mémoire intégrée ci-dessous. Vous pouvez également connecter un fournisseur de mémoire externe dans Paramètres > Mémoire et contexte.',
   providerDesc: name => `${name} ajoute son propre rappel à chaque session, en plus de la couche intégrée.`,
   providerNotReadyDesc: name =>
     `${name} est le fournisseur enregistré, mais n’apporte aucun rappel tant qu’il n’est pas prêt. La couche intégrée fonctionne dans tous les cas.`,
@@ -22,11 +22,11 @@ export const frMemoryLayers: MemoryLayersTranslations = {
     unavailable: 'indisponible',
     missing: 'non installé'
   },
-  builtinLayer: 'Couche intégrée',
+  builtinLayer: 'Mémoire intégrée',
   onByDefault: 'Activée par défaut',
   on: 'Activée',
   off: 'Désactivée',
   onlyFile: file => `${file} uniquement`,
   builtinDesc:
-    'MEMORY.md et USER.md sont la mémoire propre de Unitalk, indépendante de tout fournisseur externe. Les deux sont chargés dans les sessions par défaut ; les interrupteurs mémoire et profil utilisateur dans Réglages › Mémoire et contexte désactivent chacun. Un fournisseur s’ajoute à cette couche ; il ne la remplace jamais.'
+    'MEMORY.md et USER.md sont la mémoire propre de Unitalk, indépendante de tout fournisseur externe. Les deux sont chargées dans les sessions par défaut et peuvent être désactivées individuellement. Tout fournisseur de mémoire externe vient compléter cette mémoire intégrée, sans la remplacer.'
 }

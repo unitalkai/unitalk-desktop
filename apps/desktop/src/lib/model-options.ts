@@ -5,6 +5,11 @@ import { getGlobalModelOptions, type HermesGateway } from '@/hermes'
 type CatalogProviderIdentity = Partial<Pick<ModelOptionProvider, 'aliases' | 'name'>> &
   Pick<ModelOptionProvider, 'slug'>
 
+/** UI-only curation: keep the full catalog available for current-session capabilities. */
+export function isModelPickerProviderVisible(provider: Pick<ModelOptionProvider, 'slug'>): boolean {
+  return provider.slug === 'unitalk'
+}
+
 /** True when `currentProvider` is this catalog row — slug, display name, or
  *  a custom-provider alias (`custom:<key>` vs the bare config key, #87035). */
 export function catalogProviderMatches(provider: CatalogProviderIdentity, currentProvider: string): boolean {

@@ -4,6 +4,7 @@ import { useI18n } from '@/i18n'
 import { capitalize, normalize } from '@/lib/text'
 
 import iconUrl from '../../assets/icon.png'
+
 import introCopyJsonl from './intro-copy.jsonl?raw'
 
 type IntroCopy = {
@@ -175,7 +176,6 @@ export function Intro({ personality, seed }: IntroProps) {
       className="pointer-events-none flex w-full min-w-0 flex-col items-center justify-center px-6 py-10 text-center sm:px-10 lg:px-14"
       data-slot="aui_intro"
       style={{
-        background: '#F3EFE6',
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif'
       }}
     >
@@ -190,7 +190,6 @@ export function Intro({ personality, seed }: IntroProps) {
         <p
           className="m-0 text-center leading-relaxed tracking-tight"
           style={{
-            color: '#1C1A17',
             fontSize: 'clamp(1.5rem, 2.2vw, 2rem)',
             fontWeight: 600,
             letterSpacing: '-0.035em',

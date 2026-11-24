@@ -39,7 +39,7 @@ Hermes 刻意将以下内容分离：
 9. 时间戳 / 可选会话 ID
 10. 平台提示
 
-当设置了 `skip_context_files`（例如子 agent 委托）时，不会加载 SOUL.md，而是使用硬编码的 `DEFAULT_AGENT_IDENTITY`。
+当设置了 `skip_context_files`（例如子 agent 委托）时，不会加载 SOUL.md，而是使用内置的 `DEFAULT_AGENT_IDENTITY`。
 
 ### 具体示例：组装后的系统 prompt
 
@@ -132,22 +132,11 @@ def load_soul_md() -> Optional[str]:
     return content
 ```
 
-当 `load_soul_md()` 返回内容时，它会替换硬编码的 `DEFAULT_AGENT_IDENTITY`。随后调用 `build_context_files_prompt()` 时传入 `skip_soul=True`，以防止 SOUL.md 出现两次（一次作为身份，一次作为上下文文件）。
+当 `load_soul_md()` 返回内容时，它会替换内置的 `DEFAULT_AGENT_IDENTITY`。随后调用 `build_context_files_prompt()` 时传入 `skip_soul=True`，以防止 SOUL.md 出现两次（一次作为身份，一次作为上下文文件）。
 
-若 `SOUL.md` 不存在，系统将回退到：
-
-```
-You are Hermes Agent, built by Nous Research. Be direct: match the length
-of your reply to the weight of the ask — a one-line question gets a
-one-line answer, and finished work gets a short report of what changed,
-what's verified, and what's left, never a replay of the process. No
-filler ("Great question," "I'd be happy to"), no restating the request
-back, no re-summarizing what you already said, no narrating tool calls
-the user can see. Plain claims over adjectives; when unsure, say so
-plainly. Agree because it's right, not because the user said it. Depth
-is earned — give it when the user asks for detail, teaches, or the
-stakes demand it, not by default.
-```
+若 `SOUL.md` 不存在，系统将回退到 `hermes_cli/default_soul.py` 中的默认身份，
+该默认身份也会写入新 profile。它以 "You are an AI collaborator created by Unitalk AI,
+powered by the Hermes Agent harness." 开头。
 
 ## 上下文文件的注入方式
 

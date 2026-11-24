@@ -14,7 +14,12 @@ import { useQuery } from '@tanstack/react-query'
 import { type ReactElement, useMemo, useRef, useState } from 'react'
 
 import { useI18n } from '@/i18n'
-import { catalogProviderMatches, modelOptionsQueryKey, requestModelOptions } from '@/lib/model-options'
+import {
+  catalogProviderMatches,
+  isModelPickerProviderVisible,
+  modelOptionsQueryKey,
+  requestModelOptions
+} from '@/lib/model-options'
 import { currentPickerSelection } from '@/lib/model-status-label'
 import { accountResetMs, formatReset, modelResetMs } from '@/lib/provider-limit'
 import { foldIncludes, normalize } from '@/lib/text'
@@ -142,7 +147,11 @@ export function ModelPickerDialog({
   )
 
   const customModels = useStore($customModels)
-  const providers = withCustomModels(modelOptions.data?.providers ?? [], customModels)
+
+  const providers = withCustomModels(
+    (modelOptions.data?.providers ?? []).filter(isModelPickerProviderVisible),
+    customModels
+  )
 
   const { model: optionsModel, provider: optionsProvider } = currentPickerSelection(
     { model: currentModel, provider: currentProvider },

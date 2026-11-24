@@ -2001,7 +2001,7 @@ body.guest-pointer-lock :is(webview, iframe) {
 [data-slot='aui_intro'] p:last-child {
   max-width: 34rem;
   margin-inline: auto;
-  color: var(--ui-text-tertiary);
+  color: var(--ui-text-primary);
   font-size: 0.875rem;
   line-height: 1.45;
 }
