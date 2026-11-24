@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import importlib.util
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -189,7 +190,10 @@ def test_convex_errors_are_reported_without_secrets(tools, requests, monkeypatch
     bases = tools.handle_knowledge_list_bases({})
 
     assert json.loads(search) == {"error": tools.INVALID_SESSION_MESSAGE}
-    assert json.loads(bases) == {"error": "Knowledge base request failed (500 upstream)."}
+    assert re.fullmatch(
+        r"Knowledge base request failed \(500 upstream at step convex_request, ref hermes_[0-9a-f]{16}\)\.",
+        json.loads(bases)["error"],
+    )
     assert "secret-key-value" not in search + bases
 
 

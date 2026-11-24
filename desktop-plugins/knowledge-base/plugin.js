@@ -93,6 +93,32 @@ export const LOCALES = {
     processing: 'Processing…',
     progress: (done, total) => `${done}/${total} batches`,
     skippedPages: pages => `Pages skipped: ${pages}`,
+    failedAt: step => `Failed at ${step}`,
+    errorRef: id => `ref ${id}`,
+    steps: {
+      auth: 'sign-in check',
+      clerk_mint: 'Unitalk session',
+      convex_request: 'knowledge base service',
+      blob_upload: 'file upload',
+      upload_url: 'upload preparation',
+      verify_upload: 'upload check',
+      download_url: 'download link',
+      download: 'reading the stored file',
+      split_pdf: 'PDF splitting',
+      read_text: 'reading the text',
+      partition: 'text extraction',
+      ocr: 'text recognition (OCR)',
+      extract_text: 'text extraction',
+      embed: 'embeddings',
+      save_chunks: 'saving passages',
+      qdrant_upsert: 'indexing',
+      qdrant_delete: 'index cleanup',
+      search_embed: 'search embeddings',
+      qdrant_search: 'search',
+      load_chunks: 'loading passages',
+      blob_delete: 'file removal',
+      database: 'database'
+    },
     errorRetry: 'Error, retry',
     retry: 'Try again',
     download: 'Download',
@@ -201,6 +227,32 @@ export const LOCALES = {
     processing: 'Traitement…',
     progress: (done, total) => `${done}/${total} lots`,
     skippedPages: pages => `Pages ignorées : ${pages}`,
+    failedAt: step => `Échec à l’étape ${step}`,
+    errorRef: id => `réf. ${id}`,
+    steps: {
+      auth: 'vérification de connexion',
+      clerk_mint: 'session Unitalk',
+      convex_request: 'service de base de connaissances',
+      blob_upload: 'envoi du fichier',
+      upload_url: 'préparation de l’envoi',
+      verify_upload: 'vérification de l’envoi',
+      download_url: 'lien de téléchargement',
+      download: 'lecture du fichier stocké',
+      split_pdf: 'découpage du PDF',
+      read_text: 'lecture du texte',
+      partition: 'extraction du texte',
+      ocr: 'reconnaissance de texte (OCR)',
+      extract_text: 'extraction du texte',
+      embed: 'vectorisation',
+      save_chunks: 'enregistrement des passages',
+      qdrant_upsert: 'indexation',
+      qdrant_delete: 'nettoyage de l’index',
+      search_embed: 'vectorisation de la recherche',
+      qdrant_search: 'recherche',
+      load_chunks: 'chargement des passages',
+      blob_delete: 'suppression du fichier',
+      database: 'base de données'
+    },
     errorRetry: 'Erreur, réessayer',
     retry: 'Réessayer',
     download: 'Télécharger',
@@ -453,19 +505,43 @@ export function errorStatus(error) {
   return match ? Number(match[1]) : null
 }
 
-function jsonDetail(text) {
+function jsonBody(error) {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+  const start = message.indexOf('{')
+  if (start < 0) return null
   try {
-    const body = JSON.parse(text)
-    return typeof body?.detail === 'string' && body.detail ? body.detail : null
+    const body = JSON.parse(message.slice(start))
+    return body && typeof body === 'object' ? body : null
   } catch {
     return null
   }
 }
 
+const textField = (body, key) => (typeof body?.[key] === 'string' && body[key] ? body[key] : null)
+
 export function errorCode(error) {
-  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
-  const start = message.indexOf('{')
-  return start >= 0 ? jsonDetail(message.slice(start)) : null
+  return textField(jsonBody(error), 'detail')
+}
+
+// Where a request failed ({step, requestId}), as reported by the plugin API next to `detail`.
+export function errorTrace(error) {
+  const body = jsonBody(error)
+  return { requestId: textField(body, 'requestId'), step: textField(body, 'step') }
+}
+
+export function stepLabel(t, step) {
+  if (!step) return null
+  const key = `steps.${step}`
+  const text = t(key)
+  return text && text !== key ? text : step
+}
+
+function withTrace(t, text, error) {
+  const { requestId, step } = errorTrace(error)
+  const where = [step ? t('failedAt', stepLabel(t, step)) : null, requestId ? t('errorRef', requestId) : null]
+    .filter(Boolean)
+    .join(', ')
+  return where ? `${text} (${where})` : text
 }
 
 export function errorMessage(error) {
@@ -482,9 +558,16 @@ export function localizedError(t, error) {
   if (code) {
     const key = `errors.${code}`
     const text = t(key)
-    if (text && text !== key) return text
+    if (text && text !== key) return withTrace(t, text, error)
   }
-  return errorMessage(error)
+  return withTrace(t, errorMessage(error), error)
+}
+
+// "Failed at embeddings: embeddings 429: …" for a file whose processing failed.
+export function fileErrorText(t, file) {
+  const label = stepLabel(t, file.errorStep)
+  if (!label) return file.error || ''
+  return file.error ? `${t('failedAt', label)}: ${file.error}` : t('failedAt', label)
 }
 
 export function isSessionError(error) {
@@ -838,10 +921,11 @@ function StatusBadge({ file, readOnly, onRetry }) {
     })
   }
   if (file.status === 'error') {
-    const label = file.error ? `${t('errorRetry')}: ${file.error}` : t('errorRetry')
+    const detail = fileErrorText(t, file)
+    const label = detail ? `${t('errorRetry')}: ${detail}` : t('errorRetry')
     if (readOnly) {
       return jsx(Tip, {
-        label: file.error || t('errorRetry'),
+        label: detail || t('errorRetry'),
         children: jsx('span', {
           className: 'kb-status',
           'data-tone': 'error',
@@ -867,8 +951,9 @@ function StatusBadge({ file, readOnly, onRetry }) {
 function FileNote({ file }) {
   const t = usePluginI18n(ID)
 
-  if (file.status === 'error' && file.error) {
-    return jsx('span', { className: 'kb-file-note', 'data-tone': 'error', title: file.error, children: file.error })
+  if (file.status === 'error' && (file.error || file.errorStep)) {
+    const detail = fileErrorText(t, file)
+    return jsx('span', { className: 'kb-file-note', 'data-tone': 'error', title: detail, children: detail })
   }
   if (file.status === 'processing') {
     const progress = fileProgress(file)

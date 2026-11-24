@@ -192,7 +192,8 @@ def test_ended_session_is_cleared_and_reported(client, clerk, convex, plugin, mo
     response = client.get(f"{PREFIX}/bases")
 
     assert response.status_code == 428
-    assert response.json() == {"detail": "kb_session_invalid"}
+    assert response.json()["detail"] == "kb_session_invalid"
+    assert response.json()["step"] == "clerk_mint"  # Clerk refused the token, Convex was never called
     assert convex.calls == []
     assert not (home / "plugin-data" / "knowledge-base" / "session.json").exists()
     assert client.get(f"{PREFIX}/bases").json() == {"detail": "kb_session_required"}
@@ -266,7 +267,7 @@ def test_an_organization_the_user_left_does_not_end_the_session(client, clerk, c
     clerk.status, clerk.error_code = 404, "organization_not_found_or_unauthorized"
     monkeypatch.setattr(plugin.auth, "_now", lambda: int(time.time()) + 600)
 
-    assert client.get(f"{PREFIX}/bases").json() == {"detail": "kb_session_invalid"}
+    assert client.get(f"{PREFIX}/bases").json()["detail"] == "kb_session_invalid"
     assert (home / "plugin-data" / "knowledge-base" / "session.json").exists()  # session kept
 
     response = _push(client, organizationId="org_gone")

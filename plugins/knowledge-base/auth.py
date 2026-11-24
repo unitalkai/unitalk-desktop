@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 import re
 import threading
@@ -26,6 +27,8 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
+
+logger = logging.getLogger("plugins.knowledge_base")
 
 PLUGIN_NAME = "knowledge-base"
 SITE_URL_ENV = "KB_CONVEX_SITE_URL"
@@ -228,6 +231,20 @@ def mint_token(creds: dict[str, Any]) -> tuple[str, int, str | None]:
     return jwt, exp, rotated if rotated and rotated != creds["clientToken"] else None
 
 
+def _log_mint_failure(reason: str, creds: dict[str, Any], **extra: Any) -> None:
+    # Identifiers only (session and organization ids are not secrets); never the client token or JWT.
+    fields = {
+        "evt": "kb.error",
+        "step": "clerk_mint",
+        "service": "clerk",
+        "reason": reason,
+        "sessionId": creds.get("sessionId"),
+        "organizationId": creds.get("organizationId") or None,
+        **extra,
+    }
+    logger.warning("kb.error %s", json.dumps(fields))
+
+
 def _error_code(response: httpx.Response) -> str:
     try:
         errors = response.json().get("errors")
@@ -272,16 +289,22 @@ def _token_from_credentials() -> str | None:
             return creds["token"]
         try:
             jwt, exp, rotated = mint_token(creds)
-        except SessionEnded:
+        except SessionEnded as error:
+            _log_mint_failure("session_ended", creds, status=str(error))
             clear_session()
             return None
-        except OrganizationUnavailable:
+        except OrganizationUnavailable as error:
             # Removed from the organization: no token for it, but keep the session; the desktop
             # pushes the next organization (or the personal account) when the user switches.
+            _log_mint_failure("organization_unavailable", creds, code=str(error))
             return None
-        except (httpx.HTTPError, ValueError):
+        except (httpx.HTTPError, ValueError) as error:
             # Clerk unreachable: fall back to the last token while it still works.
-            return creds["token"] if creds.get("exp") and _usable(creds["exp"]) else None
+            fallback = bool(creds.get("exp") and _usable(creds["exp"]))
+            _log_mint_failure(
+                "clerk_unreachable", creds, error=type(error).__name__, usingCachedToken=fallback
+            )
+            return creds["token"] if fallback else None
         if rotated:
             creds["clientToken"] = rotated
         creds["token"], creds["exp"] = jwt, exp

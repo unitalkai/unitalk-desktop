@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 
 PLUGIN_DIR = Path(__file__).resolve().parents[1]
@@ -31,7 +33,30 @@ file_rules = _sibling("file_rules")
 pdf_parts = _sibling("pdf_parts")
 selection = _sibling("selection")
 
-router = APIRouter()
+class UpstreamFailure(HTTPException):
+    """A Convex/storage failure; the response adds where it failed to the usual ``detail`` code."""
+
+    def __init__(self, status_code: int, detail: str, trace: dict[str, Any]) -> None:
+        super().__init__(status_code=status_code, detail=detail)
+        self.trace = trace
+
+
+class _TracedRoute(APIRoute):
+    # {"detail": code, "step": ..., "service": ..., "requestId": ...}: clients that only read
+    # ``detail`` keep working, the desktop also shows the step and the request id to quote.
+    def get_route_handler(self):
+        handler = super().get_route_handler()
+
+        async def traced(request: Request):
+            try:
+                return await handler(request)
+            except UpstreamFailure as failure:
+                return JSONResponse({"detail": failure.detail, **failure.trace}, status_code=failure.status_code)
+
+        return traced
+
+
+router = APIRouter(route_class=_TracedRoute)
 
 NOT_CONFIGURED = "kb_not_configured"
 SESSION_REQUIRED = "kb_session_required"
@@ -107,11 +132,11 @@ def _client():
 
 def _upstream_error(error) -> HTTPException:
     if error.status_code == 401:
-        return HTTPException(status_code=428, detail=SESSION_INVALID)
+        return UpstreamFailure(428, SESSION_INVALID, error.trace())
     status = _STATUS_MAP.get(error.status_code, error.status_code)
     if status < 400 or status > 599:
         status = 502
-    return HTTPException(status_code=status, detail=error.code)
+    return UpstreamFailure(status, error.code, error.trace())
 
 
 async def _call(awaitable):

@@ -169,6 +169,32 @@ describe('knowledge base helpers', () => {
     expect(plugin.isSessionError(ipcError(502, 'upstream'))).toBe(false)
     expect(plugin.errorMessage(new Error("Error invoking remote method 'hermes:api': Error: offline"))).toBe('offline')
   })
+
+  it('names the failed step and the request id to quote', () => {
+    const en = plugin.LOCALES.en
+
+    const t = (key: string, ...args: unknown[]) => {
+      const value = key.split('.').reduce<any>((node, part) => node?.[part], en)
+
+      return typeof value === 'function' ? value(...args) : (value ?? key)
+    }
+
+    const error = new Error(
+      `Error invoking remote method 'hermes:api': Error: 502: {"detail":"upstream","step":"search_embed","service":"embeddings","requestId":"hermes_0123456789abcdef"}`
+    )
+
+    expect(plugin.errorCode(error)).toBe('upstream')
+    expect(plugin.errorTrace(error)).toEqual({ requestId: 'hermes_0123456789abcdef', step: 'search_embed' })
+    expect(plugin.localizedError(t, error)).toBe(
+      'The knowledge base service is unavailable. Try again later. (Failed at search embeddings, ref hermes_0123456789abcdef)'
+    )
+    expect(plugin.localizedError(t, ipcError(404, 'not_found'))).toBe('This item no longer exists.')
+    expect(plugin.stepLabel(t, 'brand_new_step')).toBe('brand_new_step')
+    expect(plugin.fileErrorText(t, file({ status: 'error', error: 'embeddings 429: busy', errorStep: 'embed' }))).toBe(
+      'Failed at embeddings: embeddings 429: busy'
+    )
+    expect(plugin.fileErrorText(t, file({ status: 'error', error: 'old error' }))).toBe('old error')
+  })
 })
 
 describe('knowledge base session sync', () => {
@@ -217,6 +243,7 @@ describe('knowledge base session sync', () => {
 
   it('skips the push while Clerk is not ready', async () => {
     const rest = vi.fn()
+
     const session = plugin.createSessionSync(rest, {
       getToken: vi.fn().mockRejectedValue(new Error('Clerk not ready'))
     })
@@ -324,7 +351,14 @@ describe('knowledge base tab', () => {
       files: vi.fn().mockResolvedValue({
         files: [
           file({ skippedPages: [3, 9] }),
-          file({ id: 'f2', name: 'draft.pdf', status: 'error', error: 'Parser crashed', chunkCount: 0 }),
+          file({
+            id: 'f2',
+            name: 'draft.pdf',
+            status: 'error',
+            error: 'unstructured 500: Parser crashed',
+            errorStep: 'partition',
+            chunkCount: 0
+          }),
           file({ id: 'f3', name: 'big.pdf', status: 'processing', progress: { done: 2, total: 5 } })
         ]
       })
@@ -336,7 +370,7 @@ describe('knowledge base tab', () => {
     expect(screen.getAllByText('Contracts').length).toBeGreaterThan(0)
     expect(screen.getAllByText('2.0 KB').length).toBe(3)
     expect(screen.getByText('Pages skipped: 3, 9')).toBeTruthy()
-    expect(screen.getByText('Parser crashed')).toBeTruthy()
+    expect(screen.getByText('Failed at text extraction: unstructured 500: Parser crashed')).toBeTruthy()
     expect(screen.getByText('2/5 batches')).toBeTruthy()
     expect(api.files).toHaveBeenCalledWith('kb1')
 
@@ -581,6 +615,7 @@ describe('knowledge base active selection', () => {
       .fn()
       .mockResolvedValueOnce({ baseIds: null })
       .mockResolvedValueOnce({ baseIds: ['kb1'] })
+
     const api = plugin.createKnowledgeApi(rest)
 
     await expect(api.activeBases()).resolves.toBeNull()

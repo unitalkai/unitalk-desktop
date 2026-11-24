@@ -300,7 +300,9 @@ def test_convex_401_becomes_428_session_invalid(convex, configured):
     response = _signed_in(configured).get(f"{PREFIX}/bases")
 
     assert response.status_code == 428
-    assert response.json() == {"detail": "kb_session_invalid"}
+    body = response.json()
+    assert body["detail"] == "kb_session_invalid"
+    assert body["step"] == "convex_request" and body["requestId"].startswith("hermes_")
 
 
 @pytest.mark.parametrize(
@@ -313,7 +315,7 @@ def test_other_convex_errors_pass_status_and_code(convex, configured, status, co
     response = _signed_in(configured).delete(f"{PREFIX}/bases/b1")
 
     assert response.status_code == expected
-    assert response.json() == {"detail": code}
+    assert response.json()["detail"] == code
 
 
 def test_unreachable_convex_is_a_502(configured):
@@ -325,7 +327,8 @@ def test_unreachable_convex_is_a_502(configured):
     response = _signed_in(configured).get(f"{PREFIX}/bases")
 
     assert response.status_code == 502
-    assert response.json() == {"detail": "upstream"}
+    body = response.json()
+    assert body["detail"] == "upstream" and body["step"] == "convex_request"
 
 
 def _target(name: str) -> dict:
@@ -432,7 +435,7 @@ def test_upload_propagates_convex_413(convex, configured):
     )
 
     assert response.status_code == 413
-    assert response.json() == {"detail": "split_required"}
+    assert response.json()["detail"] == "split_required"
 
 
 def test_upload_sends_pdf_parts(convex, configured, monkeypatch):
@@ -474,7 +477,7 @@ def test_failed_storage_upload_discards_the_file(convex, configured):
     )
 
     assert response.status_code == 502
-    assert response.json() == {"detail": "upload_failed"}
+    assert response.json() == {"detail": "upload_failed", "step": "blob_upload"}
     assert convex.paths() == ["POST /kb/files", "PUT storage", "POST /kb/files/delete"]
     assert convex.call("POST", "/kb/files/delete")["json"] == {"ids": ["file_1"]}
 

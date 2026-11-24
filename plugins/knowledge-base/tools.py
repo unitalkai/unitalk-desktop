@@ -101,7 +101,9 @@ def _failure(error: Exception) -> str:
     if isinstance(error, convex_client.ConvexError):
         if error.status_code == 401:
             return _error(INVALID_SESSION_MESSAGE)
-        return _error(f"Knowledge base request failed ({error.status_code} {error.code}).")
+        where = f" at step {error.step}" if error.step else ""
+        ref = f", ref {error.request_id}" if error.request_id else ""
+        return _error(f"Knowledge base request failed ({error.status_code} {error.code}{where}{ref}).")
     return _error("Knowledge base request failed.")
 
 
