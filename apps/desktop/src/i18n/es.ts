@@ -781,6 +781,9 @@ export const esOverrides = {
       archivedChats: 'Chats archivados',
       sessions: 'Sesiones',
       about: 'Acerca de',
+      organization: 'Organización',
+      organizationGeneral: 'Información general',
+      organizationMembers: 'Miembros',
       billing: 'Facturación',
       notifications: 'Notificaciones',
       vault: 'Contraseñas e inicios de sesión'

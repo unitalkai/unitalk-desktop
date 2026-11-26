@@ -778,6 +778,9 @@ export const frOverrides = {
       archivedChats: 'Conversations archivées',
       sessions: 'Sessions',
       about: 'À propos',
+      organization: 'Organisation',
+      organizationGeneral: 'Informations générales',
+      organizationMembers: 'Membres',
       billing: 'Facturation',
       notifications: 'Notifications',
       vault: 'Mots de passe et identifiants'

@@ -179,6 +179,10 @@ export interface OverlayNavGroup extends OverlayNavLink {
   /** Visual break before this group — a spacer on the rail, a separator in
    *  the dropdown. */
   gapBefore?: boolean
+  /** A group with no page of its own (e.g. Settings ▸ Organization, whose
+   *  children open modals): clicking the label toggles its children instead of
+   *  navigating. `onSelect` is then unused on the wide rail. */
+  toggleOnSelect?: boolean
 }
 
 // Data-driven pane nav: one model renders a persistent left rail on wide
@@ -241,6 +245,15 @@ export function OverlayNav({
                   id={group.id}
                   label={group.label}
                   onClick={() => {
+                    if (hasChildren && group.toggleOnSelect) {
+                      setDisclosures(previous => ({
+                        ...previous,
+                        [group.id]: !(previous[group.id] ?? group.active)
+                      }))
+
+                      return
+                    }
+
                     if (hasChildren) {
                       setDisclosures(previous => {
                         if (previous[group.id] !== false) {

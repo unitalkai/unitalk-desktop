@@ -480,6 +480,9 @@ export const ruOverrides = {
       archivedChats: 'Архив чатов',
       sessions: 'Сеансы',
       about: 'О программе',
+      organization: 'Организация',
+      organizationGeneral: 'Основная информация',
+      organizationMembers: 'Участники',
       billing: 'Оплата',
       notifications: 'Уведомления',
       plugins: 'Плагины'

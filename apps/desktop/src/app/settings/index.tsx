@@ -31,6 +31,7 @@ import {
 import { isEditableTarget } from '@/lib/keybinds/combo'
 import { typeToFocusChar } from '@/lib/keybinds/composer-focus-keys'
 import { cn } from '@/lib/utils'
+import { $clerkSession, clerkSessionHost } from '@/store/clerk-session'
 import { $commandPaletteOpen, openCommandPalettePage } from '@/store/command-palette'
 import { confirm } from '@/store/confirm'
 import { $activeConnectionId } from '@/store/connections'
@@ -58,6 +59,7 @@ import { KeybindSettings } from './keybind-settings'
 import { KEYS_VIEWS, KeysSettings, type KeysView } from './keys-settings'
 import { movedSettingsTabRedirect } from './moved-tabs'
 import { NotificationsSettings } from './notifications-settings'
+import { organizationNavGroup } from './organization-nav'
 import {
   PAGE_SCOPED_PARAMS,
   PLUGINS_NAV_ICON,
@@ -110,6 +112,8 @@ const SUBPAGE_VIEWS: Partial<Record<SettingsViewId, ComponentType<{ subpage?: st
 export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: SettingsPageProps) {
   const scopeProfile = useStore($settingsScopeProfile)
   const activeConnectionId = useStore($activeConnectionId)
+  const clerk = useStore($clerkSession)
+  const hasActiveOrganization = Boolean(clerk.activeOrganization)
   const { t } = useI18n()
   const navigate = useNavigate()
   const { hash, pathname, search } = useLocation()
@@ -439,7 +443,19 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
             id: 'about',
             label: t.settings.nav.about,
             onSelect: () => setActiveView('about')
-          }
+          },
+          ...(hasActiveOrganization
+            ? [
+                organizationNavGroup({
+                  copy: {
+                    general: t.settings.nav.organizationGeneral,
+                    members: t.settings.nav.organizationMembers,
+                    organization: t.settings.nav.organization
+                  },
+                  openOrganizationProfile: clerkSessionHost.openOrganizationProfile
+                })
+              ]
+            : [])
         ] as OverlayNavGroup[]
       ).map(group => {
         const view = group.id as SettingsViewId
@@ -461,6 +477,7 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
     [
       activeView,
       billingView,
+      hasActiveOrganization,
       keysView,
       plugins,
       providerView,
