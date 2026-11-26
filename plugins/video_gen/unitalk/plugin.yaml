@@ -1,0 +1,7 @@
+name: unitalk
+version: 1.0.0
+description: "Unitalk video generation — Veo 3.1, Kling, Seedance and Wan through the Unitalk LiteLLM gateway, billed to the customer's Unitalk credits"
+author: Unitalk
+kind: backend
+requires_env:
+  - UNITALK_API_KEY

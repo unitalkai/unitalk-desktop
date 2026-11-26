@@ -1511,8 +1511,10 @@ gateway:
 #   teams:            hermes-teams            (same as telegram)
 #   google_chat:      hermes-google_chat      (same as telegram)
 #
+# Unitalk turns video generation (default-off upstream) on for the CLI/desktop list;
+# existing homes get it once on boot from scripts/unitalk_apply_defaults.py.
 platform_toolsets:
-  cli: [hermes-cli]
+  cli: [hermes-cli, video_gen]
   telegram: [hermes-telegram]
   discord: [hermes-discord]
   whatsapp: [hermes-whatsapp]
@@ -1890,6 +1892,15 @@ image_gen:
 #   deepinfra:
 #     # Leave `model` blank for the first live `image-gen`-tagged result.
 #     model: ""
+
+# Video generation. The bundled "unitalk" backend (plugins/video_gen/unitalk)
+# routes videos through the same gateway and credits. `model` is a family
+# (veo-3.1, veo-3.1-fast, veo-3.1-lite, kling-v4, seedance-2.5, wan-3.0) that
+# Capabilities → Tools → Video Generation selects; passing an image routes to
+# the family's image-to-video endpoint. Existing homes get this block on boot.
+video_gen:
+  provider: unitalk
+  model: wan-3.0
 
 # =============================================================================
 # Response Pacing (Messaging Platforms)
