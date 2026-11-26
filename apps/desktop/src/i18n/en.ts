@@ -736,7 +736,9 @@ export const en: Translations = {
       appUpdates: 'Version & updates',
       uninstall: 'Uninstall',
       billingOverview: 'Overview',
-      billingPlans: 'Plans'
+      billingPlans: 'Plans',
+      billingAiUsage: 'AI usage',
+      billingMySubscription: 'My subscription'
     },
     closeSettings: 'Close settings',
     exportConfig: 'Export config',
@@ -754,6 +756,7 @@ export const en: Translations = {
       missing: 'That plugin has no settings page. It may be disabled or uninstalled.'
     },
     nav: {
+      profile: 'Profile',
       providers: 'Providers',
       providerAccounts: 'Accounts',
       providerApiKeys: 'API keys',
@@ -772,6 +775,25 @@ export const en: Translations = {
       notifications: 'Notifications',
       vault: 'Passwords & Logins',
       plugins: 'Plugins'
+    },
+    identity: {
+      aiCollaborator: 'AI Collaborator',
+      nameLabel: 'AI Collaborator name',
+      namePlaceholder: 'Enter the name',
+      avatarAlt: 'Profile avatar',
+      uploadAvatar: 'Upload image',
+      uploading: 'Uploading…',
+      avatarUploadFailed: 'Could not upload avatar',
+      saveFailed: 'Could not save identity',
+      ownershipTitle: 'Ownership & Verification',
+      ownershipDesc: 'Verified owner details and organization identity for trust & compliance.',
+      verifiedOwner: 'Verified Owner',
+      unverifiedEmail: 'Unverified Email',
+      creatorName: 'Creator Name',
+      creatorEmail: 'Creator Email',
+      verified: 'Verified',
+      unverified: 'Unverified',
+      owner: 'Owner'
     },
     plugins: {
       title: 'Desktop plugins',
@@ -1567,6 +1589,7 @@ export const en: Translations = {
     model: enModelSettings,
     localModels: enLocalModels,
     billing: {
+      portalUnavailable: 'Billing portal is unavailable right now',
       perMonth: amount => `${amount}/mo`,
       creditsPerMonth: amount => `${amount} credits/mo`,
       usageLabel: label => `${label} usage`,
@@ -1636,6 +1659,33 @@ export const en: Translations = {
       },
       usage: {
         title: 'Usage'
+      },
+      spend: {
+        spendDetails: 'Spend Details',
+        signedOutTitle: 'Sign in to view AI usage',
+        signedOutBody: 'AI usage belongs to your Unitalk organization. Sign in to see spend details.',
+        period: 'Period',
+        to: 'to',
+        model: 'Model',
+        allModels: 'All models',
+        user: 'User',
+        allUsers: 'All users',
+        date: 'Date',
+        username: 'User',
+        provider: 'Provider',
+        type: 'Type',
+        tokens: 'Tokens',
+        totalTokens: 'Total tokens',
+        inputTokens: 'Input tokens',
+        outputTokens: 'Output tokens',
+        cacheReadTokens: 'Cache read tokens',
+        credits: 'Credits',
+        totalCredits: 'Total Credits',
+        downloadCsv: 'Download CSV',
+        loadingData: 'Loading spend data...',
+        noData: 'No spend data found.',
+        pageOf: (page, totalPages, totalCount) => `Page ${page} of ${totalPages} (${totalCount} records)`,
+        loadFailed: 'Failed to load spend data.'
       },
       buyCredits: {
         customAmount: 'Custom credit amount',

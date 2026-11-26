@@ -17,6 +17,34 @@ export const arSettings = {
     memoryLayers: arMemoryLayers,
     // Window plans (Nous subscription with included usage). Other billing strings: overlay-gaps.json.
     billing: {
+      portalUnavailable: 'بوابة الفوترة غير متاحة الآن',
+      spend: {
+        spendDetails: 'تفاصيل الإنفاق',
+        signedOutTitle: 'سجّل الدخول لعرض استخدام الذكاء الاصطناعي',
+        signedOutBody: 'يرتبط استخدام الذكاء الاصطناعي بمؤسستك في Unitalk. سجّل الدخول لعرض تفاصيل الإنفاق.',
+        period: 'الفترة',
+        to: 'إلى',
+        model: 'النموذج',
+        allModels: 'كل النماذج',
+        user: 'المستخدم',
+        allUsers: 'كل المستخدمين',
+        date: 'التاريخ',
+        username: 'المستخدم',
+        provider: 'المزوّد',
+        type: 'النوع',
+        tokens: 'الرموز',
+        totalTokens: 'إجمالي الرموز',
+        inputTokens: 'رموز الإدخال',
+        outputTokens: 'رموز الإخراج',
+        cacheReadTokens: 'رموز قراءة الذاكرة المؤقتة',
+        credits: 'الرصيد',
+        totalCredits: 'إجمالي الرصيد',
+        downloadCsv: 'تنزيل CSV',
+        loadingData: 'جارٍ تحميل بيانات الإنفاق…',
+        noData: 'لم يتم العثور على بيانات إنفاق.',
+        pageOf: (page, totalPages, totalCount) => `الصفحة ${page} من ${totalPages} (${totalCount} سجل)`,
+        loadFailed: 'تعذّر تحميل بيانات الإنفاق.'
+      },
       keepGoingOnCredits: {
         title: 'الاستمرار بالرصيد',
         description: 'استخدم رصيدك عند نفاد الاستخدام المضمّن. عند الإيقاف: ينتظر Unitalk إعادة التعيين.',
@@ -94,7 +122,9 @@ export const arSettings = {
       appUpdates: 'الإصدار والتحديثات',
       uninstall: 'إلغاء التثبيت',
       billingOverview: 'نظرة عامة',
-      billingPlans: 'الخطط'
+      billingPlans: 'الخطط',
+      billingAiUsage: 'استخدام الذكاء الاصطناعي',
+      billingMySubscription: 'اشتراكي'
     },
     closeSettings: 'إغلاق الإعدادات',
     exportConfig: 'تصدير الإعدادات',

@@ -6,6 +6,7 @@ export type ClerkSessionStatus = 'disabled' | 'error' | 'loading' | 'signed-in' 
 
 export interface ClerkUserSummary {
   email: null | string
+  emailVerified: boolean
   fullName: null | string
   id: string
   imageUrl: null | string

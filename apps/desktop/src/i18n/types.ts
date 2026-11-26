@@ -612,6 +612,7 @@ export interface Translations extends NoticeTranslations {
       pageCount: (n: number) => string
     }
     nav: {
+      profile: string
       providers: string
       providerAccounts: string
       providerApiKeys: string
@@ -630,6 +631,25 @@ export interface Translations extends NoticeTranslations {
       notifications: string
       vault: string
       plugins: string
+    }
+    identity: {
+      aiCollaborator: string
+      nameLabel: string
+      namePlaceholder: string
+      avatarAlt: string
+      uploadAvatar: string
+      uploading: string
+      avatarUploadFailed: string
+      saveFailed: string
+      ownershipTitle: string
+      ownershipDesc: string
+      verifiedOwner: string
+      unverifiedEmail: string
+      creatorName: string
+      creatorEmail: string
+      verified: string
+      unverified: string
+      owner: string
     }
     plugins: {
       title: string
@@ -1446,6 +1466,7 @@ export interface Translations extends NoticeTranslations {
       deleteFailed: string
     }
     billing: {
+      portalUnavailable: string
       perMonth: (amount: string) => string
       creditsPerMonth: (amount: string) => string
       usageLabel: (label: string) => string
@@ -1511,6 +1532,33 @@ export interface Translations extends NoticeTranslations {
       }
       usage: {
         title: string
+      }
+      spend: {
+        spendDetails: string
+        signedOutTitle: string
+        signedOutBody: string
+        period: string
+        to: string
+        model: string
+        allModels: string
+        user: string
+        allUsers: string
+        date: string
+        username: string
+        provider: string
+        type: string
+        tokens: string
+        totalTokens: string
+        inputTokens: string
+        outputTokens: string
+        cacheReadTokens: string
+        credits: string
+        totalCredits: string
+        downloadCsv: string
+        loadingData: string
+        noData: string
+        pageOf: (page: number, totalPages: number, totalCount: number) => string
+        loadFailed: string
       }
       buyCredits: {
         customAmount: string

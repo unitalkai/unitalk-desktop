@@ -255,6 +255,34 @@ export const jaOverrides = {
     memoryLayers: jaMemoryLayers,
     // Window plans (Nous subscription with included usage). Other billing strings: overlay-gaps.json.
     billing: {
+      portalUnavailable: '現在、請求ポータルを利用できません',
+      spend: {
+        spendDetails: '支出の詳細',
+        signedOutTitle: 'AI利用状況を表示するにはサインインしてください',
+        signedOutBody: 'AI利用状況はUnitalk組織に紐づいています。サインインして支出の詳細を確認してください。',
+        period: '期間',
+        to: '〜',
+        model: 'モデル',
+        allModels: 'すべてのモデル',
+        user: 'ユーザー',
+        allUsers: 'すべてのユーザー',
+        date: '日付',
+        username: 'ユーザー',
+        provider: 'プロバイダー',
+        type: '種類',
+        tokens: 'トークン',
+        totalTokens: '合計トークン',
+        inputTokens: '入力トークン',
+        outputTokens: '出力トークン',
+        cacheReadTokens: 'キャッシュ読み込みトークン',
+        credits: 'クレジット',
+        totalCredits: '合計クレジット',
+        downloadCsv: 'CSVをダウンロード',
+        loadingData: '支出データを読み込み中…',
+        noData: '支出データが見つかりません。',
+        pageOf: (page, totalPages, totalCount) => `${page} / ${totalPages} ページ（${totalCount} 件）`,
+        loadFailed: '支出データを読み込めませんでした。'
+      },
       keepGoingOnCredits: {
         title: 'クレジットで続行',
         description: '含まれる利用量を使い切ったらクレジットを使います。オフ: Unitalk はリセットを待ちます。',
@@ -364,7 +392,9 @@ export const jaOverrides = {
       appUpdates: 'バージョンと更新',
       uninstall: 'アンインストール',
       billingOverview: '概要',
-      billingPlans: 'プラン'
+      billingPlans: 'プラン',
+      billingAiUsage: 'AI利用状況',
+      billingMySubscription: 'マイサブスクリプション'
     },
     plugins: jaPluginSettings.plugins,
     closeSettings: '設定を閉じる',

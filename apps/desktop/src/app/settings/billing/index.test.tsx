@@ -5,6 +5,8 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { type I18nContextValue, I18nProvider, useI18n } from '@/i18n'
+import { setClerkTokenGetter } from '@/lib/clerk-session'
+import { DISABLED_CLERK_SNAPSHOT, publishClerkSession } from '@/store/clerk-session'
 import { $freeTierSignIn } from '@/store/free-tier-sign-in'
 
 import { formatMoney } from './billing-amounts'
@@ -34,6 +36,32 @@ const apiMocks = vi.hoisted(() => ({
   stepUp: vi.fn(),
   updateAutoReload: vi.fn(),
   updateKeepGoingOnCredits: vi.fn()
+}))
+
+const clerkMocks = vi.hoisted(() => ({
+  memberships: [] as Array<{
+    publicUserData?: { identifier?: string; userId?: string }
+    role?: string
+  }>,
+  orgRole: 'org:admin' as null | string,
+  user: null as null | {
+    emailAddresses?: Array<{ emailAddress: string }>
+    id: string
+    primaryEmailAddress?: { emailAddress: string }
+  }
+}))
+
+vi.mock('@clerk/react', () => ({
+  useAuth: () => ({ orgRole: clerkMocks.orgRole }),
+  useOrganization: () => ({
+    memberships: {
+      data: clerkMocks.memberships,
+      fetchNext: vi.fn(),
+      hasNextPage: false,
+      isFetching: false
+    }
+  }),
+  useUser: () => ({ user: clerkMocks.user })
 }))
 
 vi.mock('./api', () => ({
@@ -68,6 +96,10 @@ function renderBilling(initialEntries: string[] = ['/settings?tab=billing']) {
 }
 
 beforeEach(() => {
+  publishClerkSession({ ...DISABLED_CLERK_SNAPSHOT })
+  clerkMocks.memberships = []
+  clerkMocks.orgRole = 'org:admin'
+  clerkMocks.user = null
   apiMocks.fetchBillingState.mockResolvedValue(okBilling(todayBillingState))
   apiMocks.fetchSubscriptionState.mockResolvedValue(okSubscription(todaySubscriptionState))
   Object.defineProperty(window, 'hermesDesktop', {
@@ -80,10 +112,118 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  setClerkTokenGetter(null)
   vi.clearAllMocks()
+  vi.unstubAllGlobals()
 })
 
 describe('BillingSettings', () => {
+  it('prompts to sign in when no organization scopes the spend screen', async () => {
+    renderBilling(['/settings?tab=billing&bview=spending'])
+
+    expect(await screen.findByText('Sign in to view AI usage')).toBeTruthy()
+  })
+
+  it('renders the spend details UI for a signed-in organization', async () => {
+    publishClerkSession({
+      activeOrganization: {
+        id: 'org_1',
+        imageUrl: null,
+        membersCount: 1,
+        name: 'Acme',
+        role: 'org:admin',
+        slug: 'acme'
+      },
+      enabled: true,
+      error: null,
+      organizations: [],
+      status: 'signed-in',
+      tokenSyncError: null,
+      user: {
+        email: 'me@example.com',
+        emailVerified: true,
+        fullName: 'Me',
+        id: 'user_1',
+        imageUrl: null,
+        username: 'me'
+      }
+    })
+    setClerkTokenGetter(() => Promise.resolve('test-token'))
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ data: [], page: 1, total: 0, total_count: 0 }),
+      ok: true,
+      status: 200
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderBilling(['/settings?tab=billing&bview=spending'])
+
+    expect(await screen.findByText('Spend Details')).toBeTruthy()
+    expect(screen.getByText('Period')).toBeTruthy()
+    expect(await screen.findByText('No spend data found.')).toBeTruthy()
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('https://unitalk.ai/api/spend?'), {
+      headers: { Authorization: 'Bearer test-token' }
+    })
+  })
+
+  it('shows Clerk member emails instead of user ids in the spend screen', async () => {
+    publishClerkSession({
+      activeOrganization: {
+        id: 'org_1',
+        imageUrl: null,
+        membersCount: 1,
+        name: 'Acme',
+        role: 'org:admin',
+        slug: 'acme'
+      },
+      enabled: true,
+      error: null,
+      organizations: [],
+      status: 'signed-in',
+      tokenSyncError: null,
+      user: {
+        email: 'ada@example.com',
+        emailVerified: true,
+        fullName: 'Ada',
+        id: 'user_1',
+        imageUrl: null,
+        username: 'ada'
+      }
+    })
+    clerkMocks.memberships = [{ publicUserData: { identifier: 'ada@example.com', userId: 'user_1' }, role: 'org:admin' }]
+    clerkMocks.user = { id: 'user_1', primaryEmailAddress: { emailAddress: 'ada@example.com' } }
+    setClerkTokenGetter(() => Promise.resolve('test-token'))
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({
+        data: [
+          {
+            api_key: 'sk-test',
+            metadata: { user_api_key_user_id: 'user_1' },
+            model: 'gpt-4o',
+            request_id: 'req_1',
+            spend: 0.5
+          }
+        ],
+        page: 1,
+        total: 1,
+        total_count: 1
+      }),
+      ok: true,
+      status: 200
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderBilling(['/settings?tab=billing&bview=spending'])
+
+    expect(await screen.findByText('Spend Details')).toBeTruthy()
+    expect((await screen.findAllByText('ada@example.com')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('user_1')).toBeNull()
+  })
+
   it('changes billing shell language without losing the credit amount or issuing a charge', async () => {
     apiMocks.fetchBillingState.mockResolvedValue(okBilling(postTrainBillingState))
     apiMocks.fetchSubscriptionState.mockResolvedValue(okSubscription(postTrainSubscriptionState))

@@ -742,7 +742,9 @@ export const deOverrides = {
       appUpdates: 'Version & Updates',
       uninstall: 'Deinstallieren',
       billingOverview: 'Übersicht',
-      billingPlans: 'Tarife'
+      billingPlans: 'Tarife',
+      billingAiUsage: 'KI-Nutzung',
+      billingMySubscription: 'Mein Abonnement'
     },
     closeSettings: 'Einstellungen schließen',
     exportConfig: 'Konfiguration exportieren',
@@ -760,6 +762,7 @@ export const deOverrides = {
       missing: 'Dieses Plugin hat keine Einstellungsseite. Es ist eventuell deaktiviert oder deinstalliert.'
     },
     nav: {
+      profile: 'Profil',
       providers: 'Anbieter',
       providerAccounts: 'Konten',
       providerApiKeys: 'API-Schlüssel',
@@ -777,6 +780,26 @@ export const deOverrides = {
       billing: 'Abrechnung',
       notifications: 'Benachrichtigungen',
       vault: 'Passwörter & Logins'
+    },
+    identity: {
+      aiCollaborator: 'KI-Mitarbeiter',
+      nameLabel: 'Name des KI-Mitarbeiters',
+      namePlaceholder: 'Namen eingeben',
+      avatarAlt: 'Profilavatar',
+      uploadAvatar: 'Bild hochladen',
+      uploading: 'Wird hochgeladen…',
+      avatarUploadFailed: 'Avatar konnte nicht hochgeladen werden',
+      saveFailed: 'Identität konnte nicht gespeichert werden',
+      ownershipTitle: 'Eigentum & Verifizierung',
+      ownershipDesc:
+        'Verifizierte Eigentümerdetails und Organisationsidentität für Vertrauen und Compliance.',
+      verifiedOwner: 'Verifizierter Eigentümer',
+      unverifiedEmail: 'Nicht verifizierte E-Mail',
+      creatorName: 'Name des Erstellers',
+      creatorEmail: 'E-Mail des Erstellers',
+      verified: 'Verifiziert',
+      unverified: 'Nicht verifiziert',
+      owner: 'Eigentümer'
     },
     plugins: {
       title: 'Desktop-Plugins',
@@ -1923,6 +1946,35 @@ export const deOverrides = {
     model: deModelSettings,
     localModels: deLocalModels,
     billing: {
+      portalUnavailable: 'Das Abrechnungsportal ist derzeit nicht verfügbar',
+      spend: {
+        spendDetails: 'Ausgabendetails',
+        signedOutTitle: 'Melde dich an, um die KI-Nutzung zu sehen',
+        signedOutBody:
+          'Die KI-Nutzung gehört zu deiner Unitalk-Organisation. Melde dich an, um Ausgabendetails zu sehen.',
+        period: 'Zeitraum',
+        to: 'bis',
+        model: 'Modell',
+        allModels: 'Alle Modelle',
+        user: 'Benutzer',
+        allUsers: 'Alle Benutzer',
+        date: 'Datum',
+        username: 'Benutzer',
+        provider: 'Anbieter',
+        type: 'Typ',
+        tokens: 'Tokens',
+        totalTokens: 'Gesamttokens',
+        inputTokens: 'Eingabetokens',
+        outputTokens: 'Ausgabetokens',
+        cacheReadTokens: 'Cache-Lese-Tokens',
+        credits: 'Credits',
+        totalCredits: 'Gesamtcredits',
+        downloadCsv: 'CSV herunterladen',
+        loadingData: 'Ausgabendaten werden geladen…',
+        noData: 'Keine Ausgabendaten gefunden.',
+        pageOf: (page, totalPages, totalCount) => `Seite ${page} von ${totalPages} (${totalCount} Einträge)`,
+        loadFailed: 'Ausgabendaten konnten nicht geladen werden.'
+      },
       perMonth: (amount: string) => `${amount}/Monat`,
       creditsPerMonth: (amount: string) => `${amount} Credits/Monat`,
       usageLabel: (label: string) => `${label}-Nutzung`,

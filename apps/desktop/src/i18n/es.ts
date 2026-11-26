@@ -745,7 +745,9 @@ export const esOverrides = {
       appUpdates: 'Versión y actualizaciones',
       uninstall: 'Desinstalar',
       billingOverview: 'Resumen',
-      billingPlans: 'Planes'
+      billingPlans: 'Planes',
+      billingAiUsage: 'Uso de IA',
+      billingMySubscription: 'Mi suscripción'
     },
     closeSettings: 'Cerrar configuración',
     exportConfig: 'Exportar configuración',
@@ -764,6 +766,7 @@ export const esOverrides = {
       missing: 'Este plugin no tiene página de ajustes. Puede que esté desactivado o desinstalado.'
     },
     nav: {
+      profile: 'Perfil',
       providers: 'Proveedores',
       providerAccounts: 'Cuentas',
       providerApiKeys: 'Claves API',
@@ -781,6 +784,26 @@ export const esOverrides = {
       billing: 'Facturación',
       notifications: 'Notificaciones',
       vault: 'Contraseñas e inicios de sesión'
+    },
+    identity: {
+      aiCollaborator: 'Colaborador de IA',
+      nameLabel: 'Nombre del colaborador de IA',
+      namePlaceholder: 'Introduce el nombre',
+      avatarAlt: 'Avatar del perfil',
+      uploadAvatar: 'Subir imagen',
+      uploading: 'Subiendo…',
+      avatarUploadFailed: 'No se pudo subir el avatar',
+      saveFailed: 'No se pudo guardar la identidad',
+      ownershipTitle: 'Propiedad y verificación',
+      ownershipDesc:
+        'Datos del propietario verificado e identidad de la organización para confianza y cumplimiento.',
+      verifiedOwner: 'Propietario verificado',
+      unverifiedEmail: 'Correo no verificado',
+      creatorName: 'Nombre del creador',
+      creatorEmail: 'Correo del creador',
+      verified: 'Verificado',
+      unverified: 'No verificado',
+      owner: 'Propietario'
     },
     plugins: {
       title: 'Plugins de escritorio',
@@ -1916,6 +1939,35 @@ export const esOverrides = {
     model: esModelSettings,
     localModels: esLocalModels,
     billing: {
+      portalUnavailable: 'El portal de facturación no está disponible en este momento',
+      spend: {
+        spendDetails: 'Detalles de gasto',
+        signedOutTitle: 'Inicia sesión para ver el uso de IA',
+        signedOutBody:
+          'El uso de IA pertenece a tu organización de Unitalk. Inicia sesión para ver los detalles de gasto.',
+        period: 'Período',
+        to: 'hasta',
+        model: 'Modelo',
+        allModels: 'Todos los modelos',
+        user: 'Usuario',
+        allUsers: 'Todos los usuarios',
+        date: 'Fecha',
+        username: 'Usuario',
+        provider: 'Proveedor',
+        type: 'Tipo',
+        tokens: 'Tokens',
+        totalTokens: 'Tokens totales',
+        inputTokens: 'Tokens de entrada',
+        outputTokens: 'Tokens de salida',
+        cacheReadTokens: 'Tokens de lectura de caché',
+        credits: 'Créditos',
+        totalCredits: 'Créditos totales',
+        downloadCsv: 'Descargar CSV',
+        loadingData: 'Cargando datos de gasto…',
+        noData: 'No se encontraron datos de gasto.',
+        pageOf: (page, totalPages, totalCount) => `Página ${page} de ${totalPages} (${totalCount} registros)`,
+        loadFailed: 'No se pudieron cargar los datos de gasto.'
+      },
       perMonth: (amount: string) => `${amount}/mes`,
       creditsPerMonth: (amount: string) => `${amount} créditos/mes`,
       usageLabel: (label: string) => `Uso de ${label}`,
