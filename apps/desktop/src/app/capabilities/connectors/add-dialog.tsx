@@ -110,7 +110,14 @@ export function AddServerDialog({ controller, onOpenChange, open, profile }: Add
               </Button>
               <Button
                 className="ml-auto"
-                disabled={saving || nameTaken || !isDraftComplete(draft) || controller.profilePending}
+                disabled={
+                  saving ||
+                  nameTaken ||
+                  !isDraftComplete(draft) ||
+                  controller.profilePending ||
+                  controller.configLoading ||
+                  controller.configFailed
+                }
                 loading={saving}
                 onClick={() => void save()}
                 size="sm"

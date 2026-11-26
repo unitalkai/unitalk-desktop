@@ -1557,12 +1557,22 @@ export type { ViewportRect } from './viewport'
  *  builds without it would route the pin to the ACTIVE gateway. Bot Mode's
  *  Advanced section is the reference consumer. */
 export { CapabilitiesView } from '@/app/capabilities'
+/** The exact "Add your own" custom MCP dialog the Connectors page opens —
+ *  form, "Edit mcp.json" mode and save behavior included. Mount it when the
+ *  user asks to add a server; `onOpenChange(false)` closes it. */
+export { AddCustomMcpDialog } from '@/app/capabilities/connectors/add-custom-mcp-dialog'
 /** THE Connectors tab core Capabilities renders — managed apps, the user's
  *  own MCP servers, plugin servers and the catalog, with per-server enable,
  *  sign-in and live probes. Renders anywhere under the app router (a plugin
  *  dialog); pass a live `gateway` (see `host.getGateway()`) and the `profile`
  *  to scope it to one bot. */
 export { ConnectorsTab } from '@/app/capabilities/connectors/connectors-tab'
+/** The old Connectors page's local-server cards without its search chrome:
+ *  installed MCP servers as a grid, each with on/off, authenticate,
+ *  tools/logs/mcp.json and remove. Embed it beside a plugin's own catalog;
+ *  `excludePrefixes` drops servers the plugin already represents, and
+ *  `onCountChange` reports the visible count. */
+export { LocalMcpServersPanel } from '@/app/capabilities/connectors/local-mcp-servers-panel'
 // Every contribution surface, plugin-reachable: register keybinds, palette
 // commands, routes, themes, panes, composer extensions, and bar items with
 // the same area ids + payload types core uses.

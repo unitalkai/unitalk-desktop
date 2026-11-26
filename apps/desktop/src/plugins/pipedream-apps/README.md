@@ -28,6 +28,14 @@ enables MCP server configuration after a successful connect.
   tab is closed automatically once the account appears or the dialog is
   cancelled; Electron cannot close a system-browser tab.
 - Lists connected accounts, shows health/errors, reconnects or disconnects.
+- **Add your own** opens the built-in custom MCP dialog directly (the same one
+  the old Connectors tab used), with no page or tab redirect. Builds without the
+  SDK's `AddCustomMcpDialog` export hide the button.
+- Installed local MCP servers appear beside the Pipedream accounts under **On
+  this device** and **All** as the old Connectors cards (on/off, authenticate,
+  tools/logs/mcp.json, remove). The Pipedream-managed `pipedream_<slug>` entries
+  are omitted so each app appears only once. Builds without the SDK's
+  `LocalMcpServersPanel` export hide the section.
 - Uses the Clerk user id as `external_user_id` (persisted UUID fallback when Clerk is
   unavailable).
 - After a connect, calls the plugin backend (`POST /mcp/enable`), which configures

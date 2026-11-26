@@ -1,11 +1,46 @@
 // @vitest-environment jsdom
+import type * as PluginSdk from '@hermes/plugin-sdk'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import type { ReactElement } from 'react'
+import { type ReactElement, useEffect } from 'react'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 
 import { registerPluginLocales } from '@/i18n/plugin-i18n'
 import { queryClient } from '@/lib/query-client'
+
+const sdkMocks = vi.hoisted(() => ({
+  addCustomMcpDialog: vi.fn(),
+  localMcpCount: { value: 0 },
+  localMcpPanel: vi.fn()
+}))
+
+vi.mock('@hermes/plugin-sdk', async importOriginal => {
+  const actual = await importOriginal<typeof PluginSdk>()
+
+  const AddCustomMcpDialog = (props: Record<string, unknown>) => {
+    sdkMocks.addCustomMcpDialog(props)
+
+    return (
+      <div data-testid="custom-mcp-dialog">
+        <button onClick={() => (props.onOpenChange as ((open: boolean) => void) | undefined)?.(false)}>
+          close-add
+        </button>
+      </div>
+    )
+  }
+
+  const LocalMcpServersPanel = (props: Record<string, unknown>) => {
+    sdkMocks.localMcpPanel(props)
+
+    useEffect(() => {
+      ;(props.onCountChange as ((count: number) => void) | undefined)?.(sdkMocks.localMcpCount.value)
+    }, [props.onCountChange])
+
+    return <div data-query={String(props.query ?? '')} data-testid="local-mcp-panel" />
+  }
+
+  return { ...actual, AddCustomMcpDialog, LocalMcpServersPanel }
+})
 
 // @ts-expect-error - the runtime plugin is plain ESM outside the TS project
 import * as plugin from '../../../../desktop-plugins/pipedream-apps/plugin.js'
@@ -24,6 +59,9 @@ afterEach(() => {
   cleanup()
   queryClient.clear()
   vi.restoreAllMocks()
+  sdkMocks.addCustomMcpDialog.mockClear()
+  sdkMocks.localMcpPanel.mockClear()
+  sdkMocks.localMcpCount.value = 0
   delete window.document.documentElement.dataset.hermesDesktopHost
 })
 
@@ -33,14 +71,107 @@ afterAll(() => {
 
 describe('pipedream apps runtime plugin', () => {
   it('rewrites Connectors deep links to the Apps tab', () => {
-    expect(plugin.appsTabHashFor('#/capabilities?tab=connectors')).toBe(
-      '#/capabilities?tab=pipedream-apps:apps'
-    )
+    expect(plugin.appsTabHashFor('#/capabilities?tab=connectors')).toBe('#/capabilities?tab=pipedream-apps:apps')
     expect(plugin.appsTabHashFor('#/capabilities?tab=connectors&server=github')).toBe(
       '#/capabilities?tab=pipedream-apps:apps&server=github'
     )
     expect(plugin.appsTabHashFor('#/capabilities?tab=skills')).toBe('#/capabilities?tab=skills')
     expect(plugin.appsTabHashFor('')).toBe('')
+  })
+
+  it('opens the custom MCP dialog directly from Add your own', async () => {
+    const api = {
+      config: vi.fn().mockResolvedValue({ configured: true, environment: 'production', mcpBaseUrl: null }),
+      categories: vi.fn().mockResolvedValue({ categories: [] }),
+      apps: vi.fn().mockResolvedValue({
+        apps: [
+          { name_slug: 'slack', name: 'Slack' },
+          { name_slug: 'github', name: 'GitHub' }
+        ],
+        nextCursor: null,
+        prevCursor: null,
+        totalCount: 2
+      }),
+      accounts: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'apn_1', email: 'me@example.com', healthy: true, app: { name_slug: 'slack', name: 'Slack' } }
+        ]),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      mcpEnable: vi.fn()
+    }
+
+    renderWithQuery(
+      <plugin.PipedreamAppsTab
+        api={api}
+        copyText={vi.fn()}
+        fallbackExternalUserId="user-1"
+        openExternal={vi.fn()}
+        toast={toastSpy()}
+      />
+    )
+
+    const addButton = await screen.findByRole('button', { name: 'Add your own' })
+
+    expect(addButton.closest('.pd-search')).toBeTruthy()
+    fireEvent.click(addButton)
+
+    expect(await screen.findByTestId('custom-mcp-dialog')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Local MCP' })).toBeNull()
+    expect(sdkMocks.addCustomMcpDialog).toHaveBeenLastCalledWith(expect.objectContaining({ open: true }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'close-add' }))
+
+    await waitFor(() => expect(screen.queryByTestId('custom-mcp-dialog')).toBeNull())
+  })
+
+  it('shows local MCP servers under All and On this device, not Available', async () => {
+    sdkMocks.localMcpCount.value = 2
+
+    const api = {
+      config: vi.fn().mockResolvedValue({ configured: true, environment: 'production', mcpBaseUrl: null }),
+      categories: vi.fn().mockResolvedValue({ categories: [] }),
+      apps: vi.fn().mockResolvedValue({
+        apps: [
+          { name_slug: 'slack', name: 'Slack' },
+          { name_slug: 'github', name: 'GitHub' }
+        ],
+        nextCursor: null,
+        prevCursor: null,
+        totalCount: 2
+      }),
+      accounts: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'apn_1', email: 'me@example.com', healthy: true, app: { name_slug: 'slack', name: 'Slack' } }
+        ]),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      mcpEnable: vi.fn()
+    }
+
+    renderWithQuery(
+      <plugin.PipedreamAppsTab
+        api={api}
+        copyText={vi.fn()}
+        fallbackExternalUserId="user-1"
+        openExternal={vi.fn()}
+        toast={toastSpy()}
+      />
+    )
+
+    expect(await screen.findByRole('heading', { name: /Local MCP servers\s*2/ })).toBeTruthy()
+    expect(screen.getByTestId('local-mcp-panel')).toBeTruthy()
+    expect(sdkMocks.localMcpPanel).toHaveBeenLastCalledWith(
+      expect.objectContaining({ excludePrefixes: ['pipedream_'], query: '' })
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'On this device 1' }))
+    expect(screen.getByTestId('local-mcp-panel')).toBeTruthy()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Available 1' }))
+    expect(screen.queryByTestId('local-mcp-panel')).toBeNull()
   })
 
   it('maps app and account shapes', () => {
@@ -94,9 +225,7 @@ describe('pipedream apps runtime plugin', () => {
         totalCount: 1
       }),
       accounts: vi.fn(async () =>
-        connected
-          ? [{ id: 'apn_1', email: 'me@example.com', app: { name_slug: 'slack', name: 'Slack' } }]
-          : []
+        connected ? [{ id: 'apn_1', email: 'me@example.com', app: { name_slug: 'slack', name: 'Slack' } }] : []
       ),
       connect: vi.fn(async () => {
         connected = true
@@ -126,9 +255,7 @@ describe('pipedream apps runtime plugin', () => {
     expect(await screen.findByText('Slack')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Connect' }))
 
-    await waitFor(() =>
-      expect(open).toHaveBeenCalledWith('https://pipedream.com/connect?token=ctok_1', '_blank')
-    )
+    await waitFor(() => expect(open).toHaveBeenCalledWith('https://pipedream.com/connect?token=ctok_1', '_blank'))
     expect(openExternal).not.toHaveBeenCalled()
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith(
@@ -137,9 +264,7 @@ describe('pipedream apps runtime plugin', () => {
       )
     )
     expect(tab.close).toHaveBeenCalled()
-    await waitFor(() =>
-      expect(api.mcpEnable).toHaveBeenCalledWith({ externalUserId: 'user-1', appSlug: 'slack' })
-    )
+    await waitFor(() => expect(api.mcpEnable).toHaveBeenCalledWith({ externalUserId: 'user-1', appSlug: 'slack' }))
   })
 
   it('falls back to the external opener outside the browser-hosted app', async () => {
@@ -175,9 +300,7 @@ describe('pipedream apps runtime plugin', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Connect' }))
 
-    await waitFor(() =>
-      expect(openExternal).toHaveBeenCalledWith('https://pipedream.com/connect?token=ctok_1')
-    )
+    await waitFor(() => expect(openExternal).toHaveBeenCalledWith('https://pipedream.com/connect?token=ctok_1'))
     expect(open).not.toHaveBeenCalled()
   })
 
@@ -236,11 +359,7 @@ describe('pipedream apps runtime plugin', () => {
         prevCursor: null,
         totalCount: 1
       }),
-      accounts: vi.fn(async () =>
-        connected
-          ? [{ id: 'apn_1', app: { name_slug: 'slack', name: 'Slack' } }]
-          : []
-      ),
+      accounts: vi.fn(async () => (connected ? [{ id: 'apn_1', app: { name_slug: 'slack', name: 'Slack' } }] : [])),
       connect: vi.fn(async () => {
         connected = true
 
@@ -301,9 +420,7 @@ describe('pipedream apps runtime plugin', () => {
     fireEvent.click(screen.getByRole('combobox', { name: 'Category' }))
     fireEvent.click(await screen.findByText('Chat'))
 
-    await waitFor(() =>
-      expect(api.apps).toHaveBeenLastCalledWith(expect.objectContaining({ category: 'appcat_1' }))
-    )
+    await waitFor(() => expect(api.apps).toHaveBeenLastCalledWith(expect.objectContaining({ category: 'appcat_1' })))
   })
 
   it('shows the setup state when Pipedream credentials are absent', async () => {
@@ -344,9 +461,11 @@ describe('pipedream apps runtime plugin', () => {
         prevCursor: null,
         totalCount: 3
       }),
-      accounts: vi.fn().mockResolvedValue([
-        { id: 'apn_1', email: 'me@example.com', healthy: true, app: { name_slug: 'slack', name: 'Slack' } }
-      ]),
+      accounts: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'apn_1', email: 'me@example.com', healthy: true, app: { name_slug: 'slack', name: 'Slack' } }
+        ]),
       connect: vi.fn(),
       disconnect: vi.fn(),
       mcpEnable: vi.fn()
@@ -413,9 +532,7 @@ describe('pipedream apps runtime plugin', () => {
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Disconnect' }))
 
-    await waitFor(() =>
-      expect(api.disconnect).toHaveBeenCalledWith({ accountId: 'apn_1', externalUserId: 'user-1' })
-    )
+    await waitFor(() => expect(api.disconnect).toHaveBeenCalledWith({ accountId: 'apn_1', externalUserId: 'user-1' }))
     expect(api.mcpEnable).not.toHaveBeenCalled()
     expect(toast.success).toHaveBeenCalled()
   })
