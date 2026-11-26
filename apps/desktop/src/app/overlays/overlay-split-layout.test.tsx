@@ -41,6 +41,35 @@ it('expands independently of navigation and reveals a newly selected child', () 
   expect(rail.getByRole('button', { name: 'Collapse: Appearance' }).getAttribute('aria-expanded')).toBe('true')
 })
 
+it('toggles a page-less group from its label without navigating', () => {
+  const select = vi.fn()
+
+  const group: OverlayNavGroup = {
+    active: false,
+    id: 'organization',
+    label: 'Organization',
+    icon: Settings2,
+    onSelect: select,
+    toggleOnSelect: true,
+    children: [
+      { active: false, id: 'general', label: 'General info', icon: Settings2, onSelect: select },
+      { active: false, id: 'members', label: 'Members', icon: Settings2, onSelect: select }
+    ]
+  }
+
+  const { container } = render(<OverlayNav groups={[group]} />)
+  const rail = within(container.querySelector('[data-tour="overlay-nav"]') as HTMLElement)
+
+  expect(rail.queryByRole('button', { name: 'Members' })).toBeNull()
+
+  fireEvent.click(rail.getByRole('button', { name: 'Organization' }))
+  expect(select).not.toHaveBeenCalled()
+  expect(rail.getByRole('button', { name: 'Members' })).toBeTruthy()
+
+  fireEvent.click(rail.getByRole('button', { name: 'Organization' }))
+  expect(rail.queryByRole('button', { name: 'Members' })).toBeNull()
+})
+
 it('fills only the current page when a third-level sub-page is open; its parent is named, not filled', () => {
   const noop = vi.fn()
 

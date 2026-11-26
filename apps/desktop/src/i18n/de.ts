@@ -777,6 +777,9 @@ export const deOverrides = {
       archivedChats: 'Archivierte Chats',
       sessions: 'Sessions',
       about: 'Über',
+      organization: 'Organisation',
+      organizationGeneral: 'Allgemeine Informationen',
+      organizationMembers: 'Mitglieder',
       billing: 'Abrechnung',
       notifications: 'Benachrichtigungen',
       vault: 'Passwörter & Logins'

@@ -627,6 +627,9 @@ export interface Translations extends NoticeTranslations {
       archivedChats: string
       sessions: string
       about: string
+      organization: string
+      organizationGeneral: string
+      organizationMembers: string
       billing: string
       notifications: string
       vault: string

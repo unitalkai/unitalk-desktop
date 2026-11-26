@@ -58,6 +58,7 @@ export const $clerkSession = atom<ClerkSessionSnapshot>({ ...DISABLED_CLERK_SNAP
 
 let currentActions: ClerkSessionActions | null = null
 let currentSignInAction: (() => void) | null = null
+let currentOrganizationProfileOpener: ((startPath?: string) => void) | null = null
 
 export function registerClerkSessionActions(actions: ClerkSessionActions | null): () => void {
   currentActions = actions
@@ -78,6 +79,19 @@ export function registerClerkSignInAction(action: (() => void) | null): () => vo
   return () => {
     if (currentSignInAction === action) {
       currentSignInAction = null
+    }
+  }
+}
+
+/** Register the Clerk organization-profile modal opener. The Settings rail
+ *  offers "General info" / "Members" actions; both route through this seam so
+ *  the nav never calls Clerk hooks outside the provider. */
+export function registerClerkOrganizationProfileAction(action: ((startPath?: string) => void) | null): () => void {
+  currentOrganizationProfileOpener = action
+
+  return () => {
+    if (currentOrganizationProfileOpener === action) {
+      currentOrganizationProfileOpener = null
     }
   }
 }
@@ -115,7 +129,11 @@ export const clerkSessionHost = {
   createOrganization: async (input: ClerkOrganizationInput): Promise<ClerkOrganizationSummary> =>
     requireClerkSessionActions().createOrganization(input),
   refresh: async (): Promise<void> => requireClerkSessionActions().refresh(),
-  signOut: async (): Promise<void> => requireClerkSessionActions().signOut()
+  signOut: async (): Promise<void> => requireClerkSessionActions().signOut(),
+  /** Open Clerk's organization-profile modal, optionally at a sub-path
+   *  (e.g. `/organization-members`). No-ops until the signed-in bridge has
+   *  registered the opener, so a stale nav click never crashes. */
+  openOrganizationProfile: (startPath?: string): void => currentOrganizationProfileOpener?.(startPath)
 } satisfies {
   snapshot: ReadableAtom<ClerkSessionSnapshot>
   getToken: () => Promise<null | string>
@@ -124,4 +142,5 @@ export const clerkSessionHost = {
   createOrganization: (input: ClerkOrganizationInput) => Promise<ClerkOrganizationSummary>
   refresh: () => Promise<void>
   signOut: () => Promise<void>
+  openOrganizationProfile: (startPath?: string) => void
 }

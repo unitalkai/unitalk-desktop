@@ -28,6 +28,7 @@ import {
   type ClerkSessionActions,
   DISABLED_CLERK_SNAPSHOT,
   publishClerkSession,
+  registerClerkOrganizationProfileAction,
   registerClerkSessionActions,
   registerClerkSignInAction
 } from '@/store/clerk-session'
@@ -74,6 +75,17 @@ export function ClerkSessionBridge({ instanceSession }: ClerkSessionBridgeProps)
     }
 
     return registerClerkSignInAction(() => clerk.openSignIn({}))
+  }, [clerk])
+
+  // Settings ▸ Organization → General info / Members opens Clerk's own modal.
+  useEffect(() => {
+    if (typeof clerk.openOrganizationProfile !== 'function') {
+      return
+    }
+
+    return registerClerkOrganizationProfileAction(startPath =>
+      clerk.openOrganizationProfile(startPath ? { __experimental_startPath: startPath } : {})
+    )
   }, [clerk])
 
   // Unlike the Electron gate (which unmounts this bridge on sign-out), the

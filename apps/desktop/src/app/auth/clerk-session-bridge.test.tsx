@@ -20,11 +20,13 @@ const mocks = vi.hoisted(() => {
 
   const signOut = vi.fn(async () => undefined)
   const openSignIn = vi.fn(() => undefined)
+  const openOrganizationProfile = vi.fn(() => undefined)
 
   return {
     clerk: {
       createOrganization,
       loaded: true,
+      openOrganizationProfile,
       openSignIn,
       session: { clearCache: vi.fn(), getToken },
       setActive,
@@ -32,6 +34,7 @@ const mocks = vi.hoisted(() => {
     },
     createOrganization,
     getToken,
+    openOrganizationProfile,
     openSignIn,
     state: { signedIn: true },
     organization: {
@@ -114,6 +117,7 @@ describe('ClerkSessionBridge', () => {
     mocks.createOrganization.mockClear()
     mocks.signOut.mockClear()
     mocks.openSignIn.mockClear()
+    mocks.openOrganizationProfile.mockClear()
     mocks.state.signedIn = true
     $clerkSession.set({ ...DISABLED_CLERK_SNAPSHOT })
   })
@@ -185,6 +189,20 @@ describe('ClerkSessionBridge', () => {
     })
 
     expect(mocks.openSignIn).toHaveBeenCalledWith({})
+  })
+
+  it('opens the organization profile modal, optionally at a sub-page', async () => {
+    render(<ClerkSessionBridge />)
+
+    await waitFor(() => expect($clerkSession.get().status).toBe('signed-in'))
+
+    clerkSessionHost.openOrganizationProfile()
+    expect(mocks.openOrganizationProfile).toHaveBeenCalledWith({})
+
+    clerkSessionHost.openOrganizationProfile('/organization-members')
+    expect(mocks.openOrganizationProfile).toHaveBeenCalledWith({
+      __experimental_startPath: '/organization-members'
+    })
   })
 
   it('applies an organization switch relayed from another window', async () => {
