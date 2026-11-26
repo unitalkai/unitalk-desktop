@@ -33,7 +33,10 @@ export const OTHER_SUBPAGES: Record<string, SettingsSubpage[]> = {
     { id: 'sources', labelKey: 'vaultSources' }
   ],
   about: [
-    { id: 'updates', labelKey: 'appUpdates' },
-    { id: 'uninstall', labelKey: 'uninstall' }
+    { id: 'updates', labelKey: 'appUpdates' }
+    // Hidden for now: the Settings ▸ About ▸ Uninstall page is temporarily
+    // disabled. Restore this entry to bring back the submenu and its
+    // danger-zone section.
+    // { id: 'uninstall', labelKey: 'uninstall' }
   ]
 }
