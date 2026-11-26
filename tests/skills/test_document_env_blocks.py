@@ -19,6 +19,9 @@ REPO = Path(__file__).resolve().parents[2]
 TOOLS = ("bash", "mkdir", "mktemp", "readlink", "ln", "rm", "chmod", "cat")
 BLOCKS = [  # (document, the venv name its sandbox branch publishes under $HOME/.cache)
     ("skills/productivity/microsoft-office/SKILL.md", "hermes-docs-venv"),
+    ("skills/productivity/docx/SKILL.md", "hermes-docs-venv"),
+    ("skills/productivity/powerpoint/SKILL.md", "hermes-docs-venv"),
+    ("skills/productivity/xlsx/SKILL.md", "hermes-docs-venv"),
     ("skills/productivity/pdf/SKILL.md", "hermes-docs-venv"),
     ("optional-skills/finance/excel-author/SKILL.md", "hermes-docs-venv"),
     ("optional-skills/finance/pptx-author/SKILL.md", "hermes-docs-venv"),
