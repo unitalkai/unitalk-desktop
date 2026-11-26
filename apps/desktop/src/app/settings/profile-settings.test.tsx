@@ -1,22 +1,33 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type * as Hermes from '@/hermes'
+import type { HermesGateway } from '@/hermes'
 import { en } from '@/i18n/en'
 import { $clerkSession, DISABLED_CLERK_SNAPSHOT } from '@/store/clerk-session'
 import type * as GatewayStore from '@/store/gateway'
 import { $profiles } from '@/store/profile'
 import type * as ProfileStore from '@/store/profile'
+import { resetUnitalkAgent } from '@/store/unitalk-agent'
 
 import type * as ProfileIdentity from './profile-identity'
 import { SettingsIdentityHeader } from './profile-identity'
 import { ProfileSettings } from './profile-settings'
 
 const mocks = vi.hoisted(() => ({
+  getAgentName: vi.fn(),
+  getClerkToken: vi.fn(),
   readProfileAvatarFile: vi.fn(),
   refreshProfiles: vi.fn(),
-  renameProfile: vi.fn(),
   request: vi.fn()
+}))
+
+vi.mock('@/lib/clerk-session', () => ({ getClerkSessionToken: mocks.getClerkToken }))
+
+vi.mock('@/lib/unitalk-instance-api', () => ({ getUnitalkAgentName: mocks.getAgentName }))
+
+vi.mock('@/store/profile', async importOriginal => ({
+  ...(await importOriginal<typeof ProfileStore>()),
+  refreshProfiles: mocks.refreshProfiles
 }))
 
 vi.mock('@/store/gateway', async importOriginal => {
@@ -25,19 +36,9 @@ vi.mock('@/store/gateway', async importOriginal => {
 
   return {
     ...actual,
-    $gateway: atom({ request: mocks.request } as unknown as Hermes.HermesGateway)
+    $gateway: atom({ request: mocks.request } as unknown as HermesGateway)
   }
 })
-
-vi.mock('@/hermes', async importOriginal => ({
-  ...(await importOriginal<typeof Hermes>()),
-  renameProfile: mocks.renameProfile
-}))
-
-vi.mock('@/store/profile', async importOriginal => ({
-  ...(await importOriginal<typeof ProfileStore>()),
-  refreshProfiles: mocks.refreshProfiles
-}))
 
 vi.mock('./profile-identity', async importOriginal => ({
   ...(await importOriginal<typeof ProfileIdentity>()),
@@ -81,12 +82,14 @@ function signIn({ emailVerified = true }: { emailVerified?: boolean } = {}): voi
 }
 
 beforeEach(() => {
+  mocks.getAgentName.mockReset().mockResolvedValue(null)
+  mocks.getClerkToken.mockReset().mockResolvedValue('clerk-token')
   mocks.readProfileAvatarFile.mockReset().mockResolvedValue('data:image/png;base64,AAAA')
   mocks.refreshProfiles.mockReset().mockResolvedValue([])
-  mocks.renameProfile.mockReset().mockResolvedValue({ name: 'default', ok: true, path: '/tmp/default' })
   mocks.request
     .mockReset()
     .mockImplementation(async (method: string) => (method === 'profiles.get_asset' ? { found: false } : { ok: true }))
+  resetUnitalkAgent()
   $profiles.set([defaultProfile])
   signIn()
 })
@@ -95,6 +98,7 @@ afterEach(() => {
   cleanup()
   $clerkSession.set({ ...DISABLED_CLERK_SNAPSHOT })
   $profiles.set([])
+  resetUnitalkAgent()
 })
 
 describe('ProfileSettings', () => {
@@ -102,6 +106,14 @@ describe('ProfileSettings', () => {
     render(<SettingsIdentityHeader />)
 
     expect(screen.getByText('Lumi')).toBeTruthy()
+    expect(screen.getByText(en.settings.identity.aiCollaborator)).toBeTruthy()
+  })
+
+  it('shows the Unitalk agent name in the sidebar header when the account has one', async () => {
+    mocks.getAgentName.mockResolvedValue('med-inc')
+    render(<SettingsIdentityHeader />)
+
+    await waitFor(() => expect(screen.getByText('med-inc')).toBeTruthy())
     expect(screen.getByText(en.settings.identity.aiCollaborator)).toBeTruthy()
   })
 
@@ -119,16 +131,21 @@ describe('ProfileSettings', () => {
     expect(screen.queryByText(en.settings.appearance.colorMode)).toBeNull()
   })
 
-  it('saves a changed display name on blur and refreshes the profile list', async () => {
+  it('shows the Unitalk agent name in a read-only name field', async () => {
+    mocks.getAgentName.mockResolvedValue('med-inc')
     render(<ProfileSettings />)
 
-    const input = screen.getByLabelText(en.settings.identity.nameLabel)
-    fireEvent.change(input, { target: { value: '  Nova  ' } })
-    fireEvent.blur(input)
+    const input = screen.getByLabelText(en.settings.identity.nameLabel) as HTMLInputElement
 
-    await waitFor(() => expect(mocks.renameProfile).toHaveBeenCalledWith('default', 'Nova'))
-    expect(mocks.refreshProfiles).toHaveBeenCalled()
-    await waitFor(() => expect((input as HTMLInputElement).value).toBe('Nova'))
+    await waitFor(() => expect(input.value).toBe('med-inc'))
+    expect(input.readOnly).toBe(true)
+  })
+
+  it('falls back to the local profile name when no Unitalk agent name is available', async () => {
+    render(<SettingsIdentityHeader />)
+
+    await waitFor(() => expect(mocks.getAgentName).toHaveBeenCalled())
+    expect(screen.getByText('Lumi')).toBeTruthy()
   })
 
   it('uploads a chosen avatar through the profile asset RPC', async () => {

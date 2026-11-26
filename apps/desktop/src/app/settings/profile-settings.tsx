@@ -1,20 +1,25 @@
 import { useStore } from '@nanostores/react'
-import { type ChangeEvent, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, useRef, useState } from 'react'
 
 import { BrandMark } from '@/components/brand-mark'
 import { Badge } from '@/components/ui/badge'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { renameProfile } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { AlertCircle, Check, Globe, Loader2, Mail, ShieldCheck, Upload, User } from '@/lib/icons'
 import { $clerkSession } from '@/store/clerk-session'
 import { notifyError } from '@/store/notifications'
-import { profileLabel, refreshProfiles } from '@/store/profile'
+import { profileLabel } from '@/store/profile'
 
 import { SettingsContent } from './primitives'
-import { readProfileAvatarFile, uploadProfileAvatar, useDefaultProfile, useProfileAvatar } from './profile-identity'
+import {
+  readProfileAvatarFile,
+  uploadProfileAvatar,
+  useDefaultProfile,
+  useProfileAvatar,
+  useUnitalkAgentName
+} from './profile-identity'
 
 export function ProfileSettings() {
   const { t } = useI18n()
@@ -23,15 +28,11 @@ export function ProfileSettings() {
   const profile = useDefaultProfile()
   const profileName = profile?.name ?? 'default'
   const currentName = profile ? profileLabel(profile) : 'default'
+  const agentName = useUnitalkAgentName()
+  const displayedName = agentName ?? currentName
   const avatar = useProfileAvatar(profileName)
-  const [name, setName] = useState(currentName)
-  const [savingName, setSavingName] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-
-  useEffect(() => {
-    setName(currentName)
-  }, [currentName])
 
   const handleAvatarClick = () => {
     if (!uploading) {
@@ -59,30 +60,6 @@ export function ProfileSettings() {
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
-    }
-  }
-
-  const handleNameBlur = async () => {
-    const next = name.trim()
-
-    if (!next || next === currentName) {
-      setName(currentName)
-
-      return
-    }
-
-    setSavingName(true)
-
-    try {
-      await renameProfile(profileName, next)
-      setName(next)
-      await refreshProfiles()
-      triggerHaptic('selection')
-    } catch (error) {
-      notifyError(error, copy.saveFailed)
-      setName(currentName)
-    } finally {
-      setSavingName(false)
     }
   }
 
@@ -130,14 +107,11 @@ export function ProfileSettings() {
               <Field htmlFor="settings-profile-name" label={copy.nameLabel}>
                 <Input
                   className="md:max-w-60"
-                  disabled={savingName}
                   id="settings-profile-name"
-                  onBlur={() => void handleNameBlur()}
-                  onChange={event => setName(event.target.value)}
-                  placeholder={copy.namePlaceholder}
+                  readOnly
                   size="lg"
                   type="text"
-                  value={name}
+                  value={displayedName}
                 />
               </Field>
               {uploading && (

@@ -32,16 +32,23 @@ export class UnitalkResponseError extends Error {
   }
 }
 
+interface RequestJsonInit {
+  credentials?: RequestCredentials
+  headers?: Record<string, string>
+}
+
 async function requestJson(
   fetcher: typeof fetch,
   url: URL,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  init: RequestJsonInit = {}
 ): Promise<Record<string, unknown>> {
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+
   const response = await fetcher(url, {
     cache: 'no-store',
-    credentials: 'include',
-    headers: { Accept: 'application/json' },
+    credentials: init.credentials ?? 'include',
+    headers: { Accept: 'application/json', ...init.headers },
     signal: signal ? AbortSignal.any([signal, timeout]) : timeout
   })
 
@@ -127,6 +134,33 @@ export async function getUnitalkInstance(fetcher: typeof fetch, signal: AbortSig
   }
 
   return { ...account, origin: instanceOrigin(instance.webDomain), ready: true }
+}
+
+export async function getUnitalkAgentName(
+  fetcher: typeof fetch,
+  token: string | null,
+  signal?: AbortSignal
+): Promise<null | string> {
+  if (!token) {
+    return null
+  }
+
+  const { instance } = await requestJson(fetcher, new URL('/api/instance', UNITALK_ORIGIN), signal, {
+    credentials: 'omit',
+    headers: { Authorization: `Bearer ${token}` }
+  })
+
+  if (instance == null) {
+    return null
+  }
+
+  if (!isRecord(instance) || (instance.agentName != null && typeof instance.agentName !== 'string')) {
+    throw new Error('Invalid Hermes instance response')
+  }
+
+  const name = typeof instance.agentName === 'string' ? instance.agentName.trim() : ''
+
+  return name || null
 }
 
 export async function initializeUnitalkInstance(

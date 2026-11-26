@@ -5,8 +5,10 @@ import { useEffect, useMemo } from 'react'
 import { BrandMark } from '@/components/brand-mark'
 import { useI18n } from '@/i18n'
 import { blobToDataUrl } from '@/lib/base64'
+import { $clerkSession } from '@/store/clerk-session'
 import { $gateway } from '@/store/gateway'
 import { $profiles, normalizeProfileKey, profileLabel, refreshProfiles } from '@/store/profile'
+import { $unitalkAgent, refreshUnitalkAgent } from '@/store/unitalk-agent'
 import type { ProfileInfo } from '@/types/hermes'
 
 const AVATAR_MISS_TTL_MS = 30_000
@@ -161,10 +163,25 @@ export function useProfileAvatar(name: null | string): null | string {
   return key ? (avatars[key]?.url ?? null) : null
 }
 
+/** The signed-in Unitalk agent name, or null while signed out / unavailable. */
+export function useUnitalkAgentName(): null | string {
+  const agent = useStore($unitalkAgent)
+  const session = useStore($clerkSession)
+  const orgId = session.activeOrganization?.id ?? null
+  const userId = session.user?.id ?? null
+
+  useEffect(() => {
+    void refreshUnitalkAgent()
+  }, [orgId, session.status, userId])
+
+  return agent.name
+}
+
 export function SettingsIdentityHeader() {
   const { t } = useI18n()
   const profile = useDefaultProfile()
-  const name = profile ? profileLabel(profile) : 'default'
+  const agentName = useUnitalkAgentName()
+  const name = agentName ?? (profile ? profileLabel(profile) : 'default')
   const avatar = useProfileAvatar(profile?.name ?? 'default')
 
   return (
