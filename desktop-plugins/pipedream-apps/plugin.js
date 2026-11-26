@@ -30,6 +30,7 @@ import {
   useQueryClient,
   useValue
 } from '@hermes/plugin-sdk'
+import * as sdk from '@hermes/plugin-sdk'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
@@ -38,11 +39,16 @@ const PAGE_SIZE = 24
 const CONNECT_TIMEOUT_MS = 5 * 60 * 1000
 const CONNECT_POLL_MS = 2500
 const ALL_CATEGORIES = 'all'
+// The Pipedream backend writes `pipedream_<slug>` MCP entries; the plugin's
+// account rows already represent those apps, so the local MCP panel omits them.
+const PIPEDREAM_SERVER_PREFIXES = ['pipedream_']
 const NO_SESSION = atom({ user: null })
 
 export const LOCALES = {
   en: {
     title: 'Connectors',
+    addYourOwn: 'Add your own',
+    localMcpServers: 'Local MCP servers',
     all: 'All',
     onThisDevice: 'On this device',
     available: 'Available',
@@ -63,8 +69,8 @@ export const LOCALES = {
     connectedState: 'Connected',
     noApps: 'No connectors found',
     noAppsHint: 'Try another search or category.',
-    noAccounts: 'No connectors connected yet',
-    noAccountsHint: 'Browse the catalog and connect your first connector.',
+    noAccounts: 'No Pipedream apps connected yet',
+    noAccountsHint: 'Browse the catalog and connect your first Pipedream app.',
     browseApps: 'Browse connectors',
     loading: 'Loading connectors…',
     errorTitle: 'Could not load connectors',
@@ -104,7 +110,8 @@ export const LOCALES = {
 const CSS = `
 .pd-apps { display:flex; flex-direction:column; gap:0.75rem; height:100%; min-height:0; padding-block:1.25rem 0.5rem; color:var(--ui-text-primary); }
 .pd-directory { display:flex; flex-direction:column; gap:0.75rem; min-height:0; flex:1; }
-.pd-toolbar { display:flex; align-items:center; }
+.pd-toolbar { display:flex; align-items:center; gap:0.5rem; }
+.pd-search-actions { display:flex; align-items:center; gap:0.375rem; flex:0 0 auto; }
 .pd-search { flex:1 1 auto; min-width:0; }
 .pd-toolbar .pd-category-select { flex:0 0 12rem; width:12rem; }
 .pd-scroll { flex:1; min-height:0; overflow-y:auto; padding:0 0 0.5rem; }
@@ -372,6 +379,9 @@ export function AppsDirectory({
   api,
   connectedSlugs,
   externalUserId,
+  localMcp,
+  localMcpCount,
+  onAddYourOwn,
   onConnect,
   onDisconnect,
   onOpen,
@@ -468,7 +478,16 @@ export function AppsDirectory({
                 type: 'button',
                 variant: 'outline',
                 children: t('browseApps')
-              })
+              }),
+              onAddYourOwn
+                ? jsx(Button, {
+                    onClick: onAddYourOwn,
+                    size: 'sm',
+                    type: 'button',
+                    variant: 'outline',
+                    children: t('addYourOwn')
+                  })
+                : null
             ]
           })
         : jsx('div', {
@@ -500,9 +519,20 @@ export function AppsDirectory({
             })
           })
         : availableApps.length === 0
-          ? jsx('div', {
-              className: 'pd-section-empty',
-              children: jsx(EmptyState, { title: t('noApps'), description: t('noAppsHint') })
+          ? jsxs('div', {
+              className: 'pd-empty-stack pd-section-empty',
+              children: [
+                jsx(EmptyState, { title: t('noApps'), description: t('noAppsHint') }),
+                onAddYourOwn
+                  ? jsx(Button, {
+                      onClick: onAddYourOwn,
+                      size: 'sm',
+                      type: 'button',
+                      variant: 'outline',
+                      children: t('addYourOwn')
+                    })
+                  : null
+              ]
             })
           : jsx('div', {
               className: 'pd-grid',
@@ -535,23 +565,41 @@ export function AppsDirectory({
           containerClassName: 'pd-search h-10 w-full min-w-0 rounded-2xl bg-(--dt-card) py-0',
           leadingContent: jsx(Badge, { size: 'xs', variant: 'muted', children: t('title') }),
           trailingAction:
-            view !== 'onDevice' && categories.length > 0
-              ? jsxs(Select, {
-                  value: category || ALL_CATEGORIES,
-                  onValueChange: value => selectCategory(value === ALL_CATEGORIES ? '' : value),
+            (view !== 'onDevice' && categories.length > 0) || onAddYourOwn
+              ? jsxs('span', {
+                  className: 'pd-search-actions',
                   children: [
-                    jsx(SelectTrigger, {
-                      'aria-label': t('category'),
-                      className: 'pd-category-select',
-                      size: 'sm',
-                      children: jsx(SelectValue, { placeholder: t('allCategories') })
-                    }),
-                    jsxs(SelectContent, {
-                      children: [
-                        jsx(SelectItem, { value: ALL_CATEGORIES, children: t('allCategories') }),
-                        ...categories.map(item => jsx(SelectItem, { value: item.id, children: item.name }, item.id))
-                      ]
-                    })
+                    view !== 'onDevice' && categories.length > 0
+                      ? jsxs(Select, {
+                          value: category || ALL_CATEGORIES,
+                          onValueChange: value => selectCategory(value === ALL_CATEGORIES ? '' : value),
+                          children: [
+                            jsx(SelectTrigger, {
+                              'aria-label': t('category'),
+                              className: 'pd-category-select',
+                              size: 'sm',
+                              children: jsx(SelectValue, { placeholder: t('allCategories') })
+                            }),
+                            jsxs(SelectContent, {
+                              children: [
+                                jsx(SelectItem, { value: ALL_CATEGORIES, children: t('allCategories') }),
+                                ...categories.map(item =>
+                                  jsx(SelectItem, { value: item.id, children: item.name }, item.id)
+                                )
+                              ]
+                            })
+                          ]
+                        })
+                      : null,
+                    onAddYourOwn
+                      ? jsx(Button, {
+                          onClick: onAddYourOwn,
+                          size: 'xs',
+                          type: 'button',
+                          variant: 'outline',
+                          children: t('addYourOwn')
+                        })
+                      : null
                   ]
                 })
               : undefined,
@@ -592,6 +640,17 @@ export function AppsDirectory({
                 children: [
                   jsx(SectionHeading, { count: connectedAccounts.length, title: t('onThisDevice') }),
                   connectedBody
+                ]
+              })
+            : null,
+          localMcp && view !== 'available'
+            ? jsxs('section', {
+                className: 'pd-section',
+                children: [
+                  localMcpCount > 0
+                    ? jsx(SectionHeading, { count: localMcpCount, title: t('localMcpServers') })
+                    : null,
+                  jsx(localMcp.Panel, { ...localMcp.props, query })
                 ]
               })
             : null,
@@ -1013,10 +1072,36 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
 export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, copyText, toast }) {
   const t = usePluginI18n(ID)
   const externalUserId = useExternalUserId(fallbackExternalUserId)
+  const activeProfile = useValue(host.state.profile)
   const queryClient = useQueryClient()
   const [selectedApp, setSelectedApp] = useState(null)
   const [connectTarget, setConnectTarget] = useState(null)
   const [disconnectTarget, setDisconnectTarget] = useState(null)
+  const [addOpen, setAddOpen] = useState(false)
+
+  // The exact old Connectors "Add your own" dialog, opened directly. The
+  // namespace read keeps the plugin loadable on older builds that do not ship
+  // the export; the button just stays hidden there.
+  const AddCustomMcpDialog = sdk.AddCustomMcpDialog
+  const canAddCustomMcp = Boolean(AddCustomMcpDialog) && typeof host.getGateway === 'function'
+
+  // The installed local servers as the real old Connectors cards. The
+  // Pipedream-managed `pipedream_<slug>` entries stay out: the account rows
+  // below already stand for them.
+  const [localMcpCount, setLocalMcpCount] = useState(0)
+  const LocalMcpServersPanel = sdk.LocalMcpServersPanel
+  const canShowLocalMcp = Boolean(LocalMcpServersPanel) && typeof host.getGateway === 'function'
+  const localMcp = canShowLocalMcp
+    ? {
+        Panel: LocalMcpServersPanel,
+        props: {
+          excludePrefixes: PIPEDREAM_SERVER_PREFIXES,
+          gateway: host.getGateway(),
+          onCountChange: setLocalMcpCount,
+          profile: activeProfile
+        }
+      }
+    : null
 
   const configQuery = useQuery({
     queryKey: [ID, 'config'],
@@ -1119,6 +1204,9 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
         api,
         connectedSlugs,
         externalUserId,
+        localMcp,
+        localMcpCount,
+        onAddYourOwn: canAddCustomMcp ? () => setAddOpen(true) : null,
         onConnect: setConnectTarget,
         onDisconnect: setDisconnectTarget,
         onOpen: setSelectedApp,
@@ -1146,6 +1234,14 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
             onClose: () => setConnectTarget(null),
             onConnected: connectedCallback,
             openExternal
+          })
+        : null,
+      addOpen && canAddCustomMcp
+        ? jsx(AddCustomMcpDialog, {
+            gateway: host.getGateway(),
+            onOpenChange: setAddOpen,
+            open: true,
+            profile: activeProfile
           })
         : null,
       jsx(ConfirmDialog, {
