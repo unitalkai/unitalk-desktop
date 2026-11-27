@@ -33,8 +33,7 @@ const CREDITS_PURPLE = '#7c3aed'
 const LINK_URLS = {
   aiCredits: 'https://agent.unitalk.ai/spend',
   bookDemo: 'https://cal.com/severine/unitalk-demo',
-  pricing: 'https://unitalk.ai/home/tarifs',
-  settings: 'https://unitalk.ai/settings/common'
+  pricing: 'https://unitalk.ai/home/tarifs'
 }
 
 const CHECKOUT_URL = 'https://unitalk.ai/api/checkout/credits'
@@ -108,7 +107,7 @@ function MenuActionRow({ icon, label, onSelect, trailing }) {
   })
 }
 
-function PublicMenuRows({ credits, onBuyCredits, openLink }) {
+function PublicMenuRows({ credits, onBuyCredits, onOpenSettings, openLink }) {
   return jsxs('div', {
     className: 'flex flex-col gap-1',
     children: [
@@ -116,7 +115,7 @@ function PublicMenuRows({ credits, onBuyCredits, openLink }) {
         icon: jsx(Codicon, { className: ICON, name: 'settings', size: '0.875rem' }),
         key: 'settings',
         label: 'Settings',
-        onSelect: () => openLink(LINK_URLS.settings)
+        onSelect: onOpenSettings
       }),
       jsxs(MenuActionRow, {
         icon: jsx(Codicon, { className: ICON, name: 'zap', size: '0.875rem' }),
@@ -502,6 +501,11 @@ function UserPanelContent({ onOpenUrl }) {
     onOpenUrl(url)
   }
 
+  const openSettings = () => {
+    setMenuOpen(false)
+    host.navigate('/settings?tab=profile')
+  }
+
   const signedIn = snapshot.enabled && snapshot.status === 'signed-in' && Boolean(snapshot.user)
   const organizationId = signedIn ? (snapshot.activeOrganization?.id ?? null) : null
   const teamCredits = useTeamCredits({ menuOpen, organizationId, signedIn })
@@ -557,6 +561,7 @@ function UserPanelContent({ onOpenUrl }) {
                 setMenuOpen(false)
                 setBuyOpen(true)
               },
+              onOpenSettings: openSettings,
               openLink
             })
           ]
@@ -768,6 +773,7 @@ function UserPanelContent({ onOpenUrl }) {
               setMenuOpen(false)
               setBuyOpen(true)
             },
+            onOpenSettings: openSettings,
             openLink
           }),
           snapshot.tokenSyncError

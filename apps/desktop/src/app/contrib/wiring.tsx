@@ -1265,7 +1265,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
         {!isHudWindow() && !isBrowserWindow() && (
           <TitlebarControls
             leftTools={leftTitlebarTools}
-            onOpenSettings={() => navigate(SETTINGS_ROUTE)}
+            onOpenSettings={() => navigate(`${SETTINGS_ROUTE}?tab=profile`)}
             tools={rightTitlebarTools}
           />
         )}

@@ -33,8 +33,7 @@ const CREDITS_PURPLE = '#7c3aed'
 const LINK_URLS = {
   aiCredits: 'https://agent.unitalk.ai/spend',
   bookDemo: 'https://cal.com/severine/unitalk-demo',
-  pricing: 'https://unitalk.ai/home/tarifs',
-  settings: 'https://unitalk.ai/settings/common'
+  pricing: 'https://unitalk.ai/home/tarifs'
 }
 
 const CHECKOUT_URL = 'https://unitalk.ai/api/checkout/credits'
@@ -108,7 +107,7 @@ function MenuActionRow({ icon, label, onSelect, trailing }) {
   })
 }
 
-function PublicMenuRows({ credits, onBuyCredits, openLink }) {
+function PublicMenuRows({ credits, onBuyCredits, onOpenSettings, openLink }) {
   return jsxs('div', {
     className: 'flex flex-col gap-1',
     children: [
@@ -116,7 +115,7 @@ function PublicMenuRows({ credits, onBuyCredits, openLink }) {
         icon: jsx(Codicon, { className: ICON, name: 'settings', size: '0.875rem' }),
         key: 'settings',
         label: 'Settings',
-        onSelect: () => openLink(LINK_URLS.settings)
+        onSelect: onOpenSettings
       }),
       jsxs(MenuActionRow, {
         icon: jsx(Codicon, { className: ICON, name: 'zap', size: '0.875rem' }),
@@ -219,11 +218,13 @@ function useTeamCredits({ menuOpen, organizationId, signedIn }) {
     if (!request) {
       request = loadTeamCredits(organizationId)
       teamCreditsInflight.set(organizationId, request)
-      request.catch(() => undefined).finally(() => {
-        if (teamCreditsInflight.get(organizationId) === request) {
-          teamCreditsInflight.delete(organizationId)
-        }
-      })
+      request
+        .catch(() => undefined)
+        .finally(() => {
+          if (teamCreditsInflight.get(organizationId) === request) {
+            teamCreditsInflight.delete(organizationId)
+          }
+        })
     }
 
     request
@@ -502,6 +503,11 @@ function UserPanelContent({ onOpenUrl }) {
     onOpenUrl(url)
   }
 
+  const openSettings = () => {
+    setMenuOpen(false)
+    host.navigate('/settings?tab=profile')
+  }
+
   const signedIn = snapshot.enabled && snapshot.status === 'signed-in' && Boolean(snapshot.user)
   const organizationId = signedIn ? (snapshot.activeOrganization?.id ?? null) : null
   const teamCredits = useTeamCredits({ menuOpen, organizationId, signedIn })
@@ -557,6 +563,7 @@ function UserPanelContent({ onOpenUrl }) {
                 setMenuOpen(false)
                 setBuyOpen(true)
               },
+              onOpenSettings: openSettings,
               openLink
             })
           ]
@@ -678,34 +685,38 @@ function UserPanelContent({ onOpenUrl }) {
                   jsxs('div', {
                     className: 'flex flex-col gap-1',
                     children: [
-                      jsxs(DropdownMenuItem, {
-                        className: 'min-w-0',
-                        disabled: pending,
-                        onSelect: event => {
-                          event.preventDefault()
-                          void switchTo(null)
+                      jsxs(
+                        DropdownMenuItem,
+                        {
+                          className: 'min-w-0',
+                          disabled: pending,
+                          onSelect: event => {
+                            event.preventDefault()
+                            void switchTo(null)
+                          },
+                          children: [
+                            jsx(AccountAvatar, {
+                              className: 'size-5',
+                              imageUrl: user.imageUrl,
+                              label: user.fullName || user.email || user.username || 'Personal'
+                            }),
+                            jsx('span', {
+                              className: 'min-w-0 flex-1 truncate',
+                              children: 'Personal account'
+                            }),
+                            pendingOrganizationId === PERSONAL_ORGANIZATION_ID
+                              ? jsx(GlyphSpinner, { className: 'ml-auto shrink-0' })
+                              : !activeOrganization
+                                ? jsx(Codicon, {
+                                    className: 'ml-auto shrink-0 text-foreground',
+                                    name: 'check',
+                                    size: '0.75rem'
+                                  })
+                                : null
+                          ]
                         },
-                        children: [
-                          jsx(AccountAvatar, {
-                            className: 'size-5',
-                            imageUrl: user.imageUrl,
-                            label: user.fullName || user.email || user.username || 'Personal'
-                          }),
-                          jsx('span', {
-                            className: 'min-w-0 flex-1 truncate',
-                            children: 'Personal account'
-                          }),
-                          pendingOrganizationId === PERSONAL_ORGANIZATION_ID
-                            ? jsx(GlyphSpinner, { className: 'ml-auto shrink-0' })
-                            : !activeOrganization
-                              ? jsx(Codicon, {
-                                  className: 'ml-auto shrink-0 text-foreground',
-                                  name: 'check',
-                                  size: '0.75rem'
-                                })
-                              : null
-                        ]
-                      }, 'personal'),
+                        'personal'
+                      ),
                       ...snapshot.organizations.map(organization => {
                         const active = activeOrganization?.id === organization.id
 
@@ -768,6 +779,7 @@ function UserPanelContent({ onOpenUrl }) {
               setMenuOpen(false)
               setBuyOpen(true)
             },
+            onOpenSettings: openSettings,
             openLink
           }),
           snapshot.tokenSyncError
