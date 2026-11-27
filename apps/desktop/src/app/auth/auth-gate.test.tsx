@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   close: vi.fn(),
   closeSecondary: vi.fn(),
   setActive: vi.fn(async (_input: { organization: null | string }) => undefined),
-  signOut: vi.fn(async () => undefined),
+  signOut: vi.fn(async (_callback?: () => void | Promise<void>) => undefined),
   submitClerkToken: vi.fn(),
   navigate: vi.fn(),
   mount: vi.fn(),
@@ -93,7 +93,16 @@ beforeEach(() => {
   mocks.auth.isSignedIn = true
   mocks.auth.orgId = 'org_1'
   mocks.setActive.mockImplementation(async ({ organization }) => { mocks.auth.orgId = organization ?? '' })
-  mocks.signOut.mockImplementation(async () => { mocks.auth.isSignedIn = false })
+  mocks.signOut.mockImplementation(async callback => {
+    mocks.auth.isSignedIn = false
+
+    // Clerk navigates before signOut resolves unless the caller supplies a callback.
+    if (callback) {
+      await callback()
+    } else {
+      mocks.navigate('/login')
+    }
+  })
   currentInstance = ownInstance()
   vi.stubGlobal('window', Object.create(window, {
     location: { value: Object.assign(new URL(window.location.href), { replace: mocks.navigate }) }

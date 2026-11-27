@@ -300,7 +300,8 @@ export function ClerkSessionBridge({ instanceSession }: ClerkSessionBridgeProps)
 
         try {
           if (instanceSession) {
-            await instanceSession.synchronize(null, () => clerk.signOut())
+            // Clerk's default navigation would leave before the gateway cookie is cleared.
+            await instanceSession.synchronize(null, () => clerk.signOut(() => undefined))
           } else {
             await clerk.signOut()
           }
