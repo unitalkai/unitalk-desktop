@@ -306,6 +306,10 @@ export function ClerkSessionBridge({ instanceSession }: ClerkSessionBridgeProps)
           }
 
           publishClerkSession({ ...DISABLED_CLERK_SNAPSHOT, enabled: true, status: 'signed-out' })
+
+          if (instanceSession?.state.get().status === 'signed-out') {
+            window.location.replace('https://unitalk.ai')
+          }
         } catch (error) {
           setSignedOutLocally(false)
           throw error

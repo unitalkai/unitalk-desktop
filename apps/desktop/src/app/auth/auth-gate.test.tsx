@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   setActive: vi.fn(async (_input: { organization: null | string }) => undefined),
   signOut: vi.fn(async () => undefined),
   submitClerkToken: vi.fn(),
+  navigate: vi.fn(),
   mount: vi.fn(),
   unmount: vi.fn()
 }))
@@ -94,6 +95,9 @@ beforeEach(() => {
   mocks.setActive.mockImplementation(async ({ organization }) => { mocks.auth.orgId = organization ?? '' })
   mocks.signOut.mockImplementation(async () => { mocks.auth.isSignedIn = false })
   currentInstance = ownInstance()
+  vi.stubGlobal('window', Object.create(window, {
+    location: { value: Object.assign(new URL(window.location.href), { replace: mocks.navigate }) }
+  }))
   vi.stubGlobal('fetch', fetcher)
   vi.stubGlobal('__HERMES_AUTH_REQUIRED__', true)
 })
@@ -111,6 +115,7 @@ describe('AuthGate in the browser host', () => {
     expect(mocks.mount).not.toHaveBeenCalled()
     expect(fetcher.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual(['/auth/logout'])
     expect(window.location.hostname).toBe('atouch-agent-web.unitalk.ai')
+    expect(mocks.navigate).not.toHaveBeenCalled()
   })
 
   it('waits for instance resolution before mounting the viewer, including Strict Mode remounts', async () => {
@@ -149,13 +154,26 @@ describe('AuthGate in the browser host', () => {
     expect(new Headers(initCall?.[1]?.headers).has('Authorization')).toBe(false)
   })
 
-  it('disconnects and signs out of Hermes when the user-panel signs out of Clerk', async () => {
+  it('redirects to Unitalk after Clerk sign-out and Hermes session cleanup finish', async () => {
     render(app())
     await screen.findByText('app content')
-    await act(async () => { await clerkSessionHost.signOut() })
-    await screen.findByText('Clerk sign-in')
+
+    let finishLogout!: (response: Response) => void
+    fetcher.mockImplementationOnce(() => new Promise<Response>(resolve => { finishLogout = resolve }))
+    let signingOut!: Promise<void>
+    await act(async () => { signingOut = clerkSessionHost.signOut() })
     expect(mocks.signOut).toHaveBeenCalledOnce()
+    expect(mocks.navigate).not.toHaveBeenCalled()
+
+    await act(async () => {
+      finishLogout(json({ ok: true }))
+      await signingOut
+    })
+    await screen.findByText('Clerk sign-in')
+    expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith('https://unitalk.ai')
     expect(mocks.unmount).toHaveBeenCalled()
+    expect(mocks.close).toHaveBeenCalled()
+    expect(mocks.closeSecondary).toHaveBeenCalled()
     expect(fetcher.mock.calls.filter(([url]) => new URL(String(url)).pathname === '/auth/logout')).toHaveLength(1)
     expect(mocks.submitClerkToken).not.toHaveBeenCalled()
   })
