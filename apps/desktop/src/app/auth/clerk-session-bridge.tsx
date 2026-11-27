@@ -3,7 +3,7 @@ import { randomUuid } from '@hermes/shared'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { submitClerkToken } from '@/api/config'
-import { setClerkTokenGetter } from '@/lib/clerk-session'
+import { buildClerkSessionCredentials, setClerkCredentialsGetter, setClerkTokenGetter } from '@/lib/clerk-session'
 import {
   applyActiveOrganization,
   clerkErrorMessage,
@@ -67,6 +67,16 @@ export function ClerkSessionBridge({ instanceSession }: ClerkSessionBridgeProps)
 
     return () => setClerkTokenGetter(null)
   }, [getToken])
+
+  useEffect(() => {
+    setClerkCredentialsGetter(async () =>
+      isSignedIn
+        ? buildClerkSessionCredentials({ frontendApi: clerk.frontendApi, organizationId: orgId, sessionId })
+        : null
+    )
+
+    return () => setClerkCredentialsGetter(null)
+  }, [clerk, isSignedIn, orgId, sessionId])
 
   // The browser's sign-in screen remains mounted while organization actions are off.
   useEffect(() => {
@@ -314,7 +324,17 @@ export function ClerkSessionBridge({ instanceSession }: ClerkSessionBridgeProps)
     }
 
     return registerClerkSessionActions(actions)
-  }, [activateOrganization, clerk, instanceSession, isSignedIn, refreshOrganizations, sessionId, sourceId, user, userId])
+  }, [
+    activateOrganization,
+    clerk,
+    instanceSession,
+    isSignedIn,
+    refreshOrganizations,
+    sessionId,
+    sourceId,
+    user,
+    userId
+  ])
 
   return null
 }

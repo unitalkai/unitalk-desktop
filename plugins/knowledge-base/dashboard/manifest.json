@@ -1,0 +1,11 @@
+{
+  "name": "knowledge-base",
+  "label": "Knowledge Base",
+  "description": "Unitalk knowledge bases backend for the Desktop Capabilities Knowledge base tab.",
+  "icon": "Database",
+  "version": "0.2.0",
+  "tab": {
+    "hidden": true
+  },
+  "api": "plugin_api.py"
+}

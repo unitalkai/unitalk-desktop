@@ -137,6 +137,13 @@ uses `clerk.setActive`, forces a fresh token with
 `getToken({ skipCache: true })`, and re-submits that token through the existing
 `submitClerkToken` path. Passing `null` selects the personal account.
 
+`host.clerk.getSessionCredentials()` returns the active Clerk session id, the
+Frontend API origin, the active organization and the native client token that
+`@clerk/electron` stores (read through its preload token cache). A plugin
+backend uses them to mint fresh session JWTs itself, so long-running backend work
+(the knowledge-base agent tool) keeps working without the renderer pushing a
+60-second token. It returns `null` outside Electron and when signed out.
+
 The User Panel's AI Credits readout asks Hermes Web for the active team's
 remaining credits (`GET https://agent.unitalk.ai/api/team`) with that token as
 `Authorization: Bearer …`. Hermes Web verifies the Clerk JWT, calls the Unitalk

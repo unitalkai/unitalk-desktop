@@ -70,6 +70,7 @@ plugins:
   enabled:
     - browser-browser-use
     - unitalk
+    - knowledge-base
   disabled: []
   # Deadline for each Git clone, fetch or checkout during plugin install. Default: 300
   # seconds. Subdirectory installs download only that folder.

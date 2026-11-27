@@ -1,6 +1,6 @@
 import { atom, type ReadableAtom } from 'nanostores'
 
-import { getClerkSessionToken } from '@/lib/clerk-session'
+import { type ClerkSessionCredentials, getClerkSessionCredentials, getClerkSessionToken } from '@/lib/clerk-session'
 
 export type ClerkSessionStatus = 'disabled' | 'error' | 'loading' | 'signed-in' | 'signed-out'
 
@@ -117,6 +117,10 @@ export const clerkSessionHost = {
   /** Fresh Clerk session JWT for the active user/organization. Short-lived;
    *  rejects while the renderer's Clerk client is not ready. */
   getToken: async (): Promise<null | string> => getClerkSessionToken(),
+  /** Credentials a backend can use to mint its own fresh session JWTs from Clerk
+   *  for as long as the Clerk session lives (see `ClerkSessionCredentials`).
+   *  Null when signed out or outside Electron; rejects while Clerk is not ready. */
+  getSessionCredentials: async (): Promise<ClerkSessionCredentials | null> => getClerkSessionCredentials(),
   signIn: async (): Promise<void> => {
     if (!currentSignInAction) {
       throw new Error('Clerk sign-in is not available')
@@ -137,6 +141,7 @@ export const clerkSessionHost = {
 } satisfies {
   snapshot: ReadableAtom<ClerkSessionSnapshot>
   getToken: () => Promise<null | string>
+  getSessionCredentials: () => Promise<ClerkSessionCredentials | null>
   signIn: () => Promise<void>
   setActiveOrganization: (organizationId: null | string) => Promise<void>
   createOrganization: (input: ClerkOrganizationInput) => Promise<ClerkOrganizationSummary>
