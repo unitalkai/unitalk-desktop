@@ -31,13 +31,26 @@ Run the gateway from this checkout (the backend is discovered as a bundled plugi
 install both halves into the Hermes home:
 
 ```powershell
-Copy-Item -Recurse plugins\pipedream-apps $HOME\.hermes\plugins\pipedream-apps
-Copy-Item -Recurse desktop-plugins\pipedream-apps $HOME\.hermes\desktop-plugins\pipedream-apps
+Copy-Item -Recurse plugins\pipedream-apps "$env:LOCALAPPDATA\hermes\plugins\pipedream-apps"
+Copy-Item -Recurse desktop-plugins\pipedream-apps "$env:LOCALAPPDATA\hermes\desktop-plugins\pipedream-apps"
 ```
 
-For a **user-source** backend, add `pipedream-apps` to `plugins.enabled` in
-`~/.hermes/config.yaml`. The Desktop half is enabled by default; disable it in
-**Capabilities → Plugins** if needed.
+The backend is installed **once** in the Hermes root (`<HERMES_HOME>/plugins`) and is
+discovered for every profile; never copy it into a profile's own `plugins/` directory.
+User-source plugins are consent-gated per profile through `plugins.enabled`, so a
+freshly created profile must enable it once. The Apps tab shows **Enable for this
+profile** when the selected profile has not done so; that toggle writes only that
+profile's `config.yaml` and affects no other profile. The manual equivalent is:
+
+```yaml
+# <HERMES_HOME>/profiles/<profile>/config.yaml
+plugins:
+  enabled:
+    - pipedream-apps
+```
+
+The Desktop half is enabled by default; disable it in **Capabilities → Plugins** if
+needed.
 
 The Apps tab requires the Desktop core build that includes the
 `capabilities.tabs` contribution area. Rebuild/relaunch Desktop after updating.
@@ -61,9 +74,12 @@ Mounted under `/api/plugins/pipedream-apps/` and authenticated by the gateway:
 
 ## Identity
 
-The Desktop plugin uses the signed-in Clerk user id as `external_user_id`, with a
-persisted plugin-storage UUID fallback when Clerk is unavailable. Accounts are scoped
-to that id, matching the existing Next.js implementation.
+The Desktop plugin scopes every Pipedream external user to the signed-in principal
+and the Hermes profile: `userId@orgId#profileName` (the profile name is included even
+for `default`). Both ids come from the Clerk snapshot; users must be signed in and
+belong to an organization, so there is no anonymous or UUID fallback. Connections made
+in one profile or Clerk organization never appear in another. The MCP URL built by
+`/mcp/enable` embeds the same id, so its tools resolve to the matching account.
 
 ## Verification
 

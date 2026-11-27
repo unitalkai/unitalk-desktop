@@ -4,7 +4,15 @@ import type { HermesConnection } from '@/global'
 import { hostHas } from '@/lib/host-capabilities'
 import { RECONNECT_ATTEMPT_TIMEOUT_MS, withTimeout } from '@/lib/with-timeout'
 
-import { $apiRequestScope, getApiRequestConnection, getApiRequestProfile, hermesApi, profileScoped } from './client'
+import {
+  $apiRequestScope,
+  capabilityScoped,
+  getApiRequestConnection,
+  getApiRequestProfile,
+  hermesApi,
+  type ProfileScope,
+  profileScoped
+} from './client'
 
 /** Resolve the ACTIVE backend's connection descriptor, (connectionId,
  *  profile)-scoped — mirroring how store/profile resolves $connection: a
@@ -48,6 +56,10 @@ export interface PluginRestOptions {
   /** Single-file multipart upload (see HermesApiRequest.upload). */
   upload?: { filename: string; contentType?: string; bytes: ArrayBuffer }
   timeoutMs?: number
+  /** Route this call to another (connection, profile) — e.g. a plugin tab whose
+   *  own profile selector is showing a profile other than the window's active
+   *  one. Omit for the ambient active profile, the historical behavior. */
+  scope?: ProfileScope
 }
 
 // Normalize `path` to a leading-slash suffix relative to `/api/plugins/<id>`.
@@ -76,14 +88,15 @@ export async function pluginRest<T>(pluginId: string, path: string, opts: Plugin
   }
 
   const suffix = pluginPathSuffix('pluginRest', path)
+  const { body, method, scope, timeoutMs, upload } = opts
 
   return hermesApi<T>({
     path: `/api/plugins/${pluginId}${suffix}`,
-    method: opts.method,
-    body: opts.body,
-    upload: opts.upload,
-    timeoutMs: opts.timeoutMs,
-    ...profileScoped()
+    method,
+    body,
+    upload,
+    timeoutMs,
+    ...(scope === undefined ? profileScoped() : capabilityScoped(scope))
   })
 }
 

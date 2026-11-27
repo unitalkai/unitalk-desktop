@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import type * as PluginSdk from '@hermes/plugin-sdk'
+import { host } from '@hermes/plugin-sdk'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { type ReactElement, useEffect } from 'react'
-import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { registerPluginLocales } from '@/i18n/plugin-i18n'
 import { queryClient } from '@/lib/query-client'
+import { type ClerkSessionSnapshot, DISABLED_CLERK_SNAPSHOT, publishClerkSession } from '@/store/clerk-session'
 
 const sdkMocks = vi.hoisted(() => ({
   addCustomMcpDialog: vi.fn(),
@@ -55,7 +57,38 @@ function toastSpy() {
   return { success: vi.fn(), warning: vi.fn() }
 }
 
+// Pipedream ids are scoped by the signed-in principal (user + organization)
+// and the Hermes profile, so every render needs a resolved Clerk session.
+const SIGNED_IN: ClerkSessionSnapshot = {
+  ...DISABLED_CLERK_SNAPSHOT,
+  activeOrganization: {
+    id: 'org-1',
+    imageUrl: null,
+    membersCount: 1,
+    name: 'Acme',
+    role: 'admin',
+    slug: 'acme'
+  },
+  enabled: true,
+  status: 'signed-in',
+  user: {
+    email: null,
+    emailVerified: true,
+    fullName: 'Test User',
+    id: 'user-1',
+    imageUrl: null,
+    username: null
+  }
+}
+
+const DEFAULT_EXTERNAL_USER_ID = 'user-1@org-1#default'
+
+beforeEach(() => {
+  publishClerkSession(SIGNED_IN)
+})
+
 afterEach(() => {
+  publishClerkSession({ ...DISABLED_CLERK_SNAPSHOT })
   cleanup()
   queryClient.clear()
   vi.restoreAllMocks()
@@ -106,7 +139,6 @@ describe('pipedream apps runtime plugin', () => {
       <plugin.PipedreamAppsTab
         api={api}
         copyText={vi.fn()}
-        fallbackExternalUserId="user-1"
         openExternal={vi.fn()}
         toast={toastSpy()}
       />
@@ -155,7 +187,6 @@ describe('pipedream apps runtime plugin', () => {
       <plugin.PipedreamAppsTab
         api={api}
         copyText={vi.fn()}
-        fallbackExternalUserId="user-1"
         openExternal={vi.fn()}
         toast={toastSpy()}
       />
@@ -182,6 +213,39 @@ describe('pipedream apps runtime plugin', () => {
     expect(plugin.accountSubtitle({ name: 'Me' })).toBe('Me')
     expect(plugin.accountTone({ healthy: false })).toBe('warn')
     expect(plugin.accountTone({ dead: true })).toBe('bad')
+  })
+
+  it('scopes the Pipedream external user by user, organization, and profile', () => {
+    expect(plugin.scopedExternalUserId('user-1', 'org-1', 'default')).toBe('user-1@org-1#default')
+    expect(plugin.scopedExternalUserId('user-1', 'org-1', 'test1')).toBe('user-1@org-1#test1')
+    expect(plugin.profileNameOf({ profile: 'test1' })).toBe('test1')
+    expect(plugin.profileNameOf('work')).toBe('work')
+    expect(plugin.profileNameOf('  ')).toBe('default')
+  })
+
+  it('forwards a profile scope to account and MCP calls', async () => {
+    const calls: Array<[string, unknown]> = []
+
+    const rest = vi.fn(async (path: string, options?: unknown) => {
+      calls.push([path, options])
+
+      return {}
+    })
+
+    const api = plugin.createPipedreamApi(rest)
+
+    await api.connect({ appSlug: 'slack', externalUserId: 'u', scope: 'test1' })
+    await api.accounts('u', 'test1')
+    await api.disconnect({ accountId: 'apn_1', externalUserId: 'u', scope: 'test1' })
+    await api.mcpEnable({ appSlug: 'slack', externalUserId: 'u', scope: 'test1' })
+
+    expect(calls[0]).toEqual(['/connect', { method: 'POST', body: { externalUserId: 'u', appSlug: 'slack' }, scope: 'test1' }])
+    expect(calls[1]).toEqual(['/accounts?externalUserId=u', { scope: 'test1' }])
+    expect(calls[2]).toEqual(['/accounts/apn_1?externalUserId=u', { method: 'DELETE', scope: 'test1' }])
+    expect(calls[3]).toEqual([
+      '/mcp/enable',
+      { method: 'POST', body: { externalUserId: 'u', appSlug: 'slack' }, scope: 'test1' }
+    ])
   })
 
   it('builds namespace-relative REST paths', async () => {
@@ -246,7 +310,6 @@ describe('pipedream apps runtime plugin', () => {
       <plugin.PipedreamAppsTab
         api={api}
         copyText={vi.fn().mockResolvedValue(true)}
-        fallbackExternalUserId="user-1"
         openExternal={openExternal}
         toast={toast}
       />
@@ -264,7 +327,143 @@ describe('pipedream apps runtime plugin', () => {
       )
     )
     expect(tab.close).toHaveBeenCalled()
-    await waitFor(() => expect(api.mcpEnable).toHaveBeenCalledWith({ externalUserId: 'user-1', appSlug: 'slack' }))
+    await waitFor(() =>
+      expect(api.mcpEnable).toHaveBeenCalledWith(
+        expect.objectContaining({ appSlug: 'slack', externalUserId: DEFAULT_EXTERNAL_USER_ID })
+      )
+    )
+  })
+
+  it('isolates connections and MCP entries to the selected profile scope', async () => {
+    let connected = false
+
+    const api = {
+      config: vi.fn().mockResolvedValue({
+        configured: true,
+        environment: 'production',
+        mcpBaseUrl: 'https://app.example/api/pipedream/mcp'
+      }),
+      categories: vi.fn().mockResolvedValue({ categories: [] }),
+      apps: vi.fn().mockResolvedValue({
+        apps: [{ name_slug: 'slack', name: 'Slack' }],
+        nextCursor: null,
+        prevCursor: null,
+        totalCount: 1
+      }),
+      accounts: vi.fn(async () =>
+        connected ? [{ id: 'apn_1', app: { name_slug: 'slack', name: 'Slack' } }] : []
+      ),
+      connect: vi.fn(async () => {
+        connected = true
+
+        return { connectLinkUrl: 'https://pipedream.com/connect?token=ctok_1' }
+      }),
+      disconnect: vi.fn(),
+      mcpEnable: vi.fn().mockResolvedValue({ ok: true, action: 'added' })
+    }
+
+    const scope = {
+      crossBackend: false,
+      key: 'test1',
+      label: 'test1',
+      onChange: vi.fn(),
+      options: [{ key: 'test1', label: 'test1', value: 'test1' }],
+      profile: 'test1',
+      value: 'test1'
+    }
+
+    renderWithQuery(
+      <plugin.PipedreamAppsTab
+        api={api}
+        copyText={vi.fn()}
+        openExternal={vi.fn().mockResolvedValue(true)}
+        scope={scope}
+        toast={toastSpy()}
+      />
+    )
+
+    await waitFor(() => expect(api.accounts).toHaveBeenCalledWith('user-1@org-1#test1', 'test1'))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Connect' }))
+
+    await waitFor(() =>
+      expect(api.connect).toHaveBeenCalledWith(
+        expect.objectContaining({ appSlug: 'slack', externalUserId: 'user-1@org-1#test1', scope: 'test1' })
+      )
+    )
+    await waitFor(() =>
+      expect(api.mcpEnable).toHaveBeenCalledWith(
+        expect.objectContaining({ appSlug: 'slack', externalUserId: 'user-1@org-1#test1', scope: 'test1' })
+      )
+    )
+  })
+
+  it('offers to enable the backend for the selected profile only', async () => {
+    let enabled = false
+
+    const api = {
+      config: vi.fn(async () => {
+        if (!enabled) {
+          throw new Error('404: {"detail":"Plugin not found"}')
+        }
+
+        return { configured: true, environment: 'production', mcpBaseUrl: null }
+      }),
+      categories: vi.fn().mockResolvedValue({ categories: [] }),
+      apps: vi.fn().mockResolvedValue({ apps: [], nextCursor: null, prevCursor: null, totalCount: 0 }),
+      accounts: vi.fn().mockResolvedValue([]),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      mcpEnable: vi.fn()
+    }
+
+    const scope = {
+      crossBackend: true,
+      key: 'homelab::test-3',
+      label: 'test-3 — homelab',
+      onChange: vi.fn(),
+      options: [{ key: 'homelab::test-3', label: 'test-3 — homelab', value: 'homelab::test-3' }],
+      profile: { connectionId: 'homelab', profile: 'test-3' },
+      value: 'homelab::test-3'
+    }
+
+    const route = {
+      connectionId: 'homelab',
+      mode: 'remote',
+      profile: 'test-3',
+      targetProfile: 'test-3'
+    }
+
+    vi.spyOn(host, 'profileRoutes').mockResolvedValue([route] as never)
+    vi.spyOn(host, 'requestProfile').mockImplementation(async () => {
+      enabled = true
+
+      return { ok: true } as never
+    })
+
+    renderWithQuery(
+      <plugin.PipedreamAppsTab
+        api={api}
+        copyText={vi.fn()}
+        openExternal={vi.fn()}
+        scope={scope}
+        toast={toastSpy()}
+      />
+    )
+
+    expect(await screen.findByText('Pipedream Apps is not enabled')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enable for this profile' }))
+
+    await waitFor(() =>
+      expect(host.requestProfile).toHaveBeenCalledWith(route, 'plugins.manage', {
+        action: 'toggle',
+        enable: true,
+        key: 'pipedream-apps'
+      })
+    )
+    expect(host.profileRoutes).toHaveBeenCalled()
+    expect(await screen.findByRole('button', { name: 'All 0' })).toBeTruthy()
   })
 
   it('falls back to the external opener outside the browser-hosted app', async () => {
@@ -292,7 +491,6 @@ describe('pipedream apps runtime plugin', () => {
       <plugin.PipedreamAppsTab
         api={api}
         copyText={vi.fn()}
-        fallbackExternalUserId="user-1"
         openExternal={openExternal}
         toast={toastSpy()}
       />
@@ -330,7 +528,6 @@ describe('pipedream apps runtime plugin', () => {
       <plugin.PipedreamAppsTab
         api={api}
         copyText={vi.fn()}
-        fallbackExternalUserId="user-1"
         openExternal={vi.fn()}
         toast={toastSpy()}
       />
@@ -375,7 +572,6 @@ describe('pipedream apps runtime plugin', () => {
       <plugin.PipedreamAppsTab
         api={api}
         copyText={vi.fn()}
-        fallbackExternalUserId="user-1"
         openExternal={vi.fn().mockResolvedValue(true)}
         toast={toast}
       />
@@ -408,7 +604,6 @@ describe('pipedream apps runtime plugin', () => {
       <plugin.PipedreamAppsTab
         api={api}
         copyText={vi.fn()}
-        fallbackExternalUserId="user-1"
         openExternal={vi.fn()}
         toast={toastSpy()}
       />
@@ -438,7 +633,6 @@ describe('pipedream apps runtime plugin', () => {
       <plugin.PipedreamAppsTab
         api={api}
         copyText={vi.fn()}
-        fallbackExternalUserId="user-1"
         openExternal={vi.fn()}
         toast={toastSpy()}
       />
@@ -475,7 +669,6 @@ describe('pipedream apps runtime plugin', () => {
       <plugin.PipedreamAppsTab
         api={api}
         copyText={vi.fn()}
-        fallbackExternalUserId="user-1"
         openExternal={vi.fn()}
         toast={toastSpy()}
       />
@@ -519,7 +712,6 @@ describe('pipedream apps runtime plugin', () => {
       <plugin.PipedreamAppsTab
         api={api}
         copyText={vi.fn()}
-        fallbackExternalUserId="user-1"
         openExternal={vi.fn()}
         toast={toast}
       />
@@ -532,7 +724,11 @@ describe('pipedream apps runtime plugin', () => {
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Disconnect' }))
 
-    await waitFor(() => expect(api.disconnect).toHaveBeenCalledWith({ accountId: 'apn_1', externalUserId: 'user-1' }))
+    await waitFor(() =>
+      expect(api.disconnect).toHaveBeenCalledWith(
+        expect.objectContaining({ accountId: 'apn_1', externalUserId: DEFAULT_EXTERNAL_USER_ID })
+      )
+    )
     expect(api.mcpEnable).not.toHaveBeenCalled()
     expect(toast.success).toHaveBeenCalled()
   })

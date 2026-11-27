@@ -4,7 +4,44 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { setApiRequestConnection, setApiRequestProfile } from '@/hermes'
 import { RECONNECT_ATTEMPT_TIMEOUT_MS } from '@/lib/with-timeout'
 
-import { activeConnection, pluginSocket } from './plugins'
+import { activeConnection, pluginRest, pluginSocket } from './plugins'
+
+describe('pluginRest profile scope', () => {
+  afterEach(() => {
+    setApiRequestConnection(null)
+    setApiRequestProfile(null)
+    Reflect.deleteProperty(window, 'hermesDesktop')
+  })
+
+  it('routes a scoped call to the selected connection and profile', async () => {
+    const api = vi.fn(async () => ({}))
+    Object.defineProperty(window, 'hermesDesktop', { configurable: true, value: { api } })
+
+    await pluginRest('pipedream-apps', '/accounts?externalUserId=u', {
+      scope: { connectionId: 'homelab', profile: 'test1' }
+    })
+
+    expect(api).toHaveBeenCalledWith({
+      connectionId: 'homelab',
+      path: '/api/plugins/pipedream-apps/accounts?externalUserId=u',
+      priority: 'foreground',
+      profile: 'test1'
+    })
+  })
+
+  it('keeps the ambient active profile when no scope is given', async () => {
+    const api = vi.fn(async () => ({}))
+    Object.defineProperty(window, 'hermesDesktop', { configurable: true, value: { api } })
+    setApiRequestProfile('alice')
+
+    await pluginRest('pipedream-apps', '/config')
+
+    expect(api).toHaveBeenCalledWith({
+      path: '/api/plugins/pipedream-apps/config',
+      profile: 'alice'
+    })
+  })
+})
 
 // desktop.getConnection/getConnectionFor are IPC round-trips into the main
 // process with no timeout of their own (#93454). A wedged main-process

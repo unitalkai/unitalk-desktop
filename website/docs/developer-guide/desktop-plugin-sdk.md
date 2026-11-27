@@ -64,7 +64,14 @@ plugin, and fail to resolve in a disk plugin). Capability comes in tiers:
   stays quiet on cancel; the promise settles when the save does and never
   rejects.
 - **`ctx.rest` / `ctx.socket`** — your plugin's own backend namespace
-  (`/api/plugins/<id>`) if you ship a `plugin_api.py`.
+  (`/api/plugins/<id>`) if you ship a `plugin_api.py`. A REST call takes an
+  optional `{ scope }` to route that one request to another `(connection,
+  profile)` instead of the window's active profile — the door a plugin tab with
+  its own profile picker needs. The same picker core renders on Capabilities is
+  exported: `useCapabilityScope()` reads the roster and current selection, and
+  `CapabilityScopeSelector` renders the control. Pass the selected
+  `scope.profile` to `ctx.rest(..., { scope: scope.profile })` and key your
+  queries by `scope.key` so a scope change is a fresh read.
 - **`ui.*`** — the design language: the app's real components, theme variables,
   icons, and formatters, so your UI matches the app pixel-for-pixel.
 

@@ -16,7 +16,6 @@ import {
   GlyphSpinner,
   host,
   icons,
-  randomUuid,
   SearchField,
   SegmentedControl,
   Select,
@@ -42,7 +41,7 @@ const ALL_CATEGORIES = 'all'
 // The Pipedream backend writes `pipedream_<slug>` MCP entries; the plugin's
 // account rows already represent those apps, so the local MCP panel omits them.
 const PIPEDREAM_SERVER_PREFIXES = ['pipedream_']
-const NO_SESSION = atom({ user: null })
+const NO_SESSION = atom({ activeOrganization: null, user: null })
 
 export const LOCALES = {
   en: {
@@ -103,7 +102,16 @@ export const LOCALES = {
     authOauth: 'OAuth',
     authKeys: 'API key',
     authNone: 'No authentication',
-    unknownApp: 'Connector'
+    unknownApp: 'Connector',
+    backendDisabledTitle: 'Pipedream Apps is not enabled',
+    backendDisabledBody: profile =>
+      `Enable the Pipedream Apps backend for the "${profile}" profile to connect apps here. Other profiles are not affected.`,
+    enableForProfile: 'Enable for this profile',
+    enablingForProfile: 'Enabling…',
+    backendEnabled: 'Pipedream Apps enabled',
+    backendEnabledMessage: profile => `Enabled for the "${profile}" profile only.`,
+    enableFailedTitle: 'Could not enable Pipedream Apps',
+    enableUnavailable: 'This Desktop build cannot enable it from here. Update Unitalk Desktop, or add "pipedream-apps" to this profile\'s plugins.enabled.'
   }
 }
 
@@ -111,6 +119,7 @@ const CSS = `
 .pd-apps { display:flex; flex-direction:column; gap:0.75rem; height:100%; min-height:0; padding-block:1.25rem 0.5rem; color:var(--ui-text-primary); }
 .pd-directory { display:flex; flex-direction:column; gap:0.75rem; min-height:0; flex:1; }
 .pd-toolbar { display:flex; align-items:center; gap:0.5rem; }
+.pd-scope-row { display:flex; justify-content:flex-end; padding-top:0.25rem; }
 .pd-search-actions { display:flex; align-items:center; gap:0.375rem; flex:0 0 auto; }
 .pd-search { flex:1 1 auto; min-width:0; }
 .pd-toolbar .pd-category-select { flex:0 0 12rem; width:12rem; }
@@ -207,13 +216,20 @@ export function errorMessage(error) {
   return 'Something went wrong.'
 }
 
+/** The gateway refused the plugin route because its backend is not enabled for the
+ *  requested profile (the consent gate answers a deliberately generic 404). */
+export function isPluginUnavailable(error) {
+  const message = errorMessage(error)
+  return /plugin not found/i.test(message) || /\b404\b/.test(message)
+}
+
 export function appsTabHashFor(hash) {
   return String(hash).replace(/([?&])tab=connectors(?=&|$)/, (_, prefix) => `${prefix}tab=${ID}:apps`)
 }
 
 export function createPipedreamApi(rest) {
   return {
-    config: () => rest('/config'),
+    config: scope => rest('/config', scope ? { scope } : undefined),
     categories: () => rest('/categories'),
     apps: ({ q, limit, category, after, before } = {}) => {
       const params = new URLSearchParams()
@@ -225,20 +241,65 @@ export function createPipedreamApi(rest) {
       const query = params.toString()
       return rest(`/apps${query ? `?${query}` : ''}`)
     },
-    connect: ({ externalUserId, appSlug }) => rest('/connect', { method: 'POST', body: { externalUserId, appSlug } }),
-    accounts: externalUserId => rest(`/accounts?externalUserId=${encodeURIComponent(externalUserId)}`),
-    disconnect: ({ externalUserId, accountId }) =>
+    connect: ({ appSlug, externalUserId, scope }) =>
+      rest('/connect', { method: 'POST', body: { externalUserId, appSlug }, ...(scope ? { scope } : {}) }),
+    accounts: (externalUserId, scope) =>
+      rest(`/accounts?externalUserId=${encodeURIComponent(externalUserId)}`, scope ? { scope } : undefined),
+    disconnect: ({ accountId, externalUserId, scope }) =>
       rest(`/accounts/${encodeURIComponent(accountId)}?externalUserId=${encodeURIComponent(externalUserId)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        ...(scope ? { scope } : {})
       }),
-    mcpEnable: ({ externalUserId, appSlug }) =>
-      rest('/mcp/enable', { method: 'POST', body: { externalUserId, appSlug } })
+    mcpEnable: ({ appSlug, externalUserId, scope }) =>
+      rest('/mcp/enable', { method: 'POST', body: { externalUserId, appSlug }, ...(scope ? { scope } : {}) })
   }
 }
 
-function useExternalUserId(fallback) {
+// A Pipedream external user is scoped by the signed-in principal AND the
+// Hermes profile: connections made in "default" never leak into "test1", and a
+// Clerk organization change is another isolated account too. Users must be
+// signed in and belong to an organization, so there is no anonymous fallback.
+export function scopedExternalUserId(userId, orgId, profileName) {
+  return `${userId}@${orgId}#${profileName}`
+}
+
+export function profileNameOf(profileScope) {
+  const name = profileScope && typeof profileScope === 'object' ? profileScope.profile : profileScope
+  return String(name ?? '').trim() || 'default'
+}
+
+function useClerkIdentity() {
   const snapshot = useValue(host.clerk?.snapshot ?? NO_SESSION)
-  return snapshot?.user?.id || fallback
+
+  return {
+    orgId: snapshot?.activeOrganization?.id || '',
+    userId: snapshot?.user?.id || ''
+  }
+}
+
+/** The route descriptor for a scope's profile, so `plugins.manage` runs on the RIGHT backend.
+ *  A bare profile name is the legacy local door; a pinned (connection, profile) scope resolves
+ *  through the roster. Falls back to the name so `requestProfile` reports any ambiguity itself. */
+async function enableRouteForScope(scope, fallbackProfile) {
+  const raw = scope ? scope.profile : fallbackProfile
+  const profile = profileNameOf(raw)
+  const pinned = raw && typeof raw === 'object' ? raw : null
+
+  try {
+    if (typeof host.profileRoutes === 'function') {
+      const routes = await host.profileRoutes()
+      const match = routes.find(
+        route =>
+          (!pinned || route.connectionId === pinned.connectionId) &&
+          (route.profile === profile || route.targetProfile === profile)
+      )
+      if (match) return match
+    }
+  } catch {
+    // Fall through to the profile string; requestProfile reports a multi-source ambiguity.
+  }
+
+  return profile
 }
 
 function initialOf(value) {
@@ -372,6 +433,24 @@ function SectionHeading({ count, title }) {
   })
 }
 
+/** The profile picker for the states that render before the directory (a backend that is not
+ *  enabled for the selected profile): the user must still be able to switch away from it. */
+function ScopeSelectorRow({ scope }) {
+  const ScopeSelector = sdk.CapabilityScopeSelector
+
+  return scope && ScopeSelector
+    ? jsx('div', { className: 'pd-scope-row', children: jsx(ScopeSelector, { scope }) })
+    : null
+}
+
+/** A pre-directory state that keeps the profile picker reachable. */
+function StatusScreen({ children, scope }) {
+  return jsxs('div', {
+    className: 'pd-apps capabilities-page',
+    children: [jsx(ScopeSelectorRow, { scope }), children]
+  })
+}
+
 export function AppsDirectory({
   accounts,
   accountsError,
@@ -386,7 +465,9 @@ export function AppsDirectory({
   onDisconnect,
   onOpen,
   onReconnect,
-  onRetryAccounts
+  onRetryAccounts,
+  scope,
+  scopeSelector
 }) {
   const t = usePluginI18n(ID)
   const [view, setView] = useState('all')
@@ -559,56 +640,59 @@ export function AppsDirectory({
   return jsxs('div', {
     className: 'pd-directory',
     children: [
-      jsx('div', {
+      jsxs('div', {
         className: 'pd-toolbar',
-        children: jsx(SearchField, {
-          containerClassName: 'pd-search h-10 w-full min-w-0 rounded-2xl bg-(--dt-card) py-0',
-          leadingContent: jsx(Badge, { size: 'xs', variant: 'muted', children: t('title') }),
-          trailingAction:
-            (view !== 'onDevice' && categories.length > 0) || onAddYourOwn
-              ? jsxs('span', {
-                  className: 'pd-search-actions',
-                  children: [
-                    view !== 'onDevice' && categories.length > 0
-                      ? jsxs(Select, {
-                          value: category || ALL_CATEGORIES,
-                          onValueChange: value => selectCategory(value === ALL_CATEGORIES ? '' : value),
-                          children: [
-                            jsx(SelectTrigger, {
-                              'aria-label': t('category'),
-                              className: 'pd-category-select',
-                              size: 'sm',
-                              children: jsx(SelectValue, { placeholder: t('allCategories') })
-                            }),
-                            jsxs(SelectContent, {
-                              children: [
-                                jsx(SelectItem, { value: ALL_CATEGORIES, children: t('allCategories') }),
-                                ...categories.map(item =>
-                                  jsx(SelectItem, { value: item.id, children: item.name }, item.id)
-                                )
-                              ]
-                            })
-                          ]
-                        })
-                      : null,
-                    onAddYourOwn
-                      ? jsx(Button, {
-                          onClick: onAddYourOwn,
-                          size: 'xs',
-                          type: 'button',
-                          variant: 'outline',
-                          children: t('addYourOwn')
-                        })
-                      : null
-                  ]
-                })
-              : undefined,
-          loading: appsQuery.isFetching && Boolean(appsQuery.data),
-          onChange: setSearch,
-          placeholder: t('search'),
-          value: search,
-          variant: 'box'
-        })
+        children: [
+          jsx(SearchField, {
+            containerClassName: 'pd-search h-10 w-full min-w-0 rounded-2xl bg-(--dt-card) py-0',
+            leadingContent: jsx(Badge, { size: 'xs', variant: 'muted', children: t('title') }),
+            trailingAction:
+              (view !== 'onDevice' && categories.length > 0) || onAddYourOwn
+                ? jsxs('span', {
+                    className: 'pd-search-actions',
+                    children: [
+                      view !== 'onDevice' && categories.length > 0
+                        ? jsxs(Select, {
+                            value: category || ALL_CATEGORIES,
+                            onValueChange: value => selectCategory(value === ALL_CATEGORIES ? '' : value),
+                            children: [
+                              jsx(SelectTrigger, {
+                                'aria-label': t('category'),
+                                className: 'pd-category-select',
+                                size: 'sm',
+                                children: jsx(SelectValue, { placeholder: t('allCategories') })
+                              }),
+                              jsxs(SelectContent, {
+                                children: [
+                                  jsx(SelectItem, { value: ALL_CATEGORIES, children: t('allCategories') }),
+                                  ...categories.map(item =>
+                                    jsx(SelectItem, { value: item.id, children: item.name }, item.id)
+                                  )
+                                ]
+                              })
+                            ]
+                          })
+                        : null,
+                      onAddYourOwn
+                        ? jsx(Button, {
+                            onClick: onAddYourOwn,
+                            size: 'xs',
+                            type: 'button',
+                            variant: 'outline',
+                            children: t('addYourOwn')
+                          })
+                        : null
+                    ]
+                  })
+                : undefined,
+            loading: appsQuery.isFetching && Boolean(appsQuery.data),
+            onChange: setSearch,
+            placeholder: t('search'),
+            value: search,
+            variant: 'box'
+          }),
+          scope && scopeSelector ? jsx(scopeSelector, { scope }) : null
+        ]
       }),
       jsx(SegmentedControl, {
         onChange: setView,
@@ -814,7 +898,7 @@ export function AppDetailsDialog({ app, connected, onClose, onConnect }) {
   })
 }
 
-export function ConnectDialog({ app, api, externalUserId, openExternal, copyText, onClose, onConnected }) {
+export function ConnectDialog({ app, api, externalUserId, openExternal, copyText, onClose, onConnected, scope }) {
   const t = usePluginI18n(ID)
   const slug = appSlugOf(app)
   const name = appNameOf(app)
@@ -875,7 +959,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
 
     void (async () => {
       try {
-        const result = await api.connect({ appSlug: slug, externalUserId })
+        const result = await api.connect({ appSlug: slug, externalUserId, scope })
         if (disposed) return
         setLink(result.connectLinkUrl)
         setDeadline(Date.now() + CONNECT_TIMEOUT_MS)
@@ -892,11 +976,11 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
     return () => {
       disposed = true
     }
-  }, [api, attempt, closeTab, externalUserId, openConnectTab, slug, t])
+  }, [api, attempt, closeTab, externalUserId, openConnectTab, scope, slug, t])
 
   const checkAccounts = useCallback(async () => {
     try {
-      const accounts = await api.accounts(externalUserId)
+      const accounts = await api.accounts(externalUserId, scope)
       const match = accounts.find(account => accountSlugOf(account) === slug)
       if (match) {
         closeTab()
@@ -907,7 +991,7 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
     } catch {
       return false
     }
-  }, [api, closeTab, externalUserId, name, onConnected, slug])
+  }, [api, closeTab, externalUserId, name, onConnected, scope, slug])
 
   useEffect(() => {
     if (status !== 'waiting' || !deadline) return undefined
@@ -1069,21 +1153,38 @@ export function ConnectDialog({ app, api, externalUserId, openExternal, copyText
   })
 }
 
-export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, copyText, toast }) {
+export function PipedreamAppsTab({ api, openExternal, copyText, scope, toast }) {
   const t = usePluginI18n(ID)
-  const externalUserId = useExternalUserId(fallbackExternalUserId)
+  const { orgId, userId } = useClerkIdentity()
   const activeProfile = useValue(host.state.profile)
   const queryClient = useQueryClient()
   const [selectedApp, setSelectedApp] = useState(null)
   const [connectTarget, setConnectTarget] = useState(null)
   const [disconnectTarget, setDisconnectTarget] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
+  const [enabling, setEnabling] = useState(false)
+
+  // Signed-in principal + profile scope. No anonymous fallback: the tab waits
+  // for Clerk rather than inventing an id that would outlive the account.
+  const identityReady = Boolean(userId && orgId)
+  const profileKey = profileNameOf(scope ? scope.profile : activeProfile)
+  const scopeKey = scope?.key ?? profileKey
+  const externalUserId = identityReady ? scopedExternalUserId(userId, orgId, profileKey) : ''
+  const apiScope = scope ? scope.profile : undefined
+
+  // A cross-backend scope has no live socket on this window's gateway; the MCP
+  // panels withhold it exactly like the built-in Connectors tab does.
+  const gateway = typeof host.getGateway === 'function' ? host.getGateway() : null
+  const scopedGateway = scope?.crossBackend ? null : gateway
+  const localMcpProfile = scope ? scope.profile : activeProfile
 
   // The exact old Connectors "Add your own" dialog, opened directly. The
   // namespace read keeps the plugin loadable on older builds that do not ship
   // the export; the button just stays hidden there.
   const AddCustomMcpDialog = sdk.AddCustomMcpDialog
   const canAddCustomMcp = Boolean(AddCustomMcpDialog) && typeof host.getGateway === 'function'
+  const ScopeSelector = sdk.CapabilityScopeSelector
+  const canEnableBackend = typeof host.requestProfile === 'function'
 
   // The installed local servers as the real old Connectors cards. The
   // Pipedream-managed `pipedream_<slug>` entries stay out: the account rows
@@ -1096,26 +1197,34 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
         Panel: LocalMcpServersPanel,
         props: {
           excludePrefixes: PIPEDREAM_SERVER_PREFIXES,
-          gateway: host.getGateway(),
+          gateway: scopedGateway,
           onCountChange: setLocalMcpCount,
-          profile: activeProfile
+          profile: localMcpProfile
         }
       }
     : null
 
   const configQuery = useQuery({
-    queryKey: [ID, 'config'],
-    queryFn: () => api.config(),
+    queryKey: [ID, 'config', scopeKey],
+    queryFn: () => api.config(apiScope),
     retry: false,
     staleTime: 5 * 60 * 1000
   })
 
   const configured = configQuery.data?.configured === true
 
+  // A profile/org/user change is a different set of connected accounts; dialogs
+  // opened for the previous scope must not complete against the new one.
+  useEffect(() => {
+    setSelectedApp(null)
+    setConnectTarget(null)
+    setDisconnectTarget(null)
+  }, [externalUserId, scopeKey])
+
   const accountsQuery = useQuery({
-    queryKey: [ID, 'accounts', externalUserId],
-    queryFn: () => api.accounts(externalUserId),
-    enabled: configured && Boolean(externalUserId),
+    queryKey: [ID, 'accounts', scopeKey, externalUserId],
+    queryFn: () => api.accounts(externalUserId, apiScope),
+    enabled: configured && identityReady,
     refetchOnWindowFocus: true,
     staleTime: 15 * 1000
   })
@@ -1124,8 +1233,8 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
   const connectedSlugs = useMemo(() => new Set(accounts.map(accountSlugOf).filter(Boolean)), [accounts])
 
   const refreshAccounts = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: [ID, 'accounts', externalUserId] }),
-    [externalUserId, queryClient]
+    () => queryClient.invalidateQueries({ queryKey: [ID, 'accounts'] }),
+    [queryClient]
   )
 
   const handleConnected = useCallback(
@@ -1138,12 +1247,12 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
       if (!configQuery.data?.mcpBaseUrl) return
 
       try {
-        await api.mcpEnable({ externalUserId, appSlug })
+        await api.mcpEnable({ appSlug, externalUserId, scope: apiScope })
       } catch (error) {
         toast.warning(t('mcpWarningTitle'), t('mcpWarning', errorMessage(error)))
       }
     },
-    [api, configQuery.data?.mcpBaseUrl, externalUserId, refreshAccounts, t, toast]
+    [api, apiScope, configQuery.data?.mcpBaseUrl, externalUserId, refreshAccounts, t, toast]
   )
 
   const connectedCallback = useCallback(
@@ -1153,6 +1262,33 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
     [handleConnected]
   )
 
+  // Explicit consent for a profile whose backend is installed but not enabled. The toggle runs
+  // on the SELECTED profile's backend, so only that profile's config changes.
+  const enableBackend = useCallback(async () => {
+    if (enabling) return
+
+    setEnabling(true)
+
+    try {
+      const route = await enableRouteForScope(scope, activeProfile)
+
+      const result = await host.requestProfile(route, 'plugins.manage', {
+        action: 'toggle',
+        enable: true,
+        key: ID
+      })
+      if (result && result.ok === false) {
+        throw new Error(result.error || t('enableFailedTitle'))
+      }
+      await queryClient.invalidateQueries({ queryKey: [ID, 'config'] })
+      toast.success(t('backendEnabled'), t('backendEnabledMessage', profileKey))
+    } catch (error) {
+      toast.warning(t('enableFailedTitle'), errorMessage(error))
+    } finally {
+      setEnabling(false)
+    }
+  }, [activeProfile, enabling, profileKey, queryClient, scope, t, toast])
+
   if (configQuery.isPending) {
     return jsxs('div', {
       className: 'pd-center',
@@ -1161,34 +1297,79 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
   }
 
   if (configQuery.isError) {
-    return jsxs('div', {
-      className: 'pd-empty-stack',
-      children: [
-        jsx(EmptyState, { title: t('backendTitle'), description: t('backendHint') }),
-        jsx(Button, {
-          onClick: () => void configQuery.refetch(),
-          size: 'sm',
-          type: 'button',
-          variant: 'outline',
-          children: t('retry')
+    if (isPluginUnavailable(configQuery.error)) {
+      return jsx(StatusScreen, {
+        scope,
+        children: jsxs('div', {
+          className: 'pd-empty-stack',
+          children: [
+            jsx(EmptyState, { title: t('backendDisabledTitle'), description: t('backendDisabledBody', profileKey) }),
+            canEnableBackend
+              ? jsx(Button, {
+                  disabled: enabling,
+                  loading: enabling,
+                  onClick: () => void enableBackend(),
+                  size: 'sm',
+                  type: 'button',
+                  children: enabling ? t('enablingForProfile') : t('enableForProfile')
+                })
+              : jsx('p', { className: 'pd-dialog-desc', children: t('enableUnavailable') }),
+            jsx(Button, {
+              onClick: () => void configQuery.refetch(),
+              size: 'sm',
+              type: 'button',
+              variant: 'outline',
+              children: t('retry')
+            })
+          ]
         })
-      ]
+      })
+    }
+
+    return jsx(StatusScreen, {
+      scope,
+      children: jsxs('div', {
+        className: 'pd-empty-stack',
+        children: [
+          jsx(EmptyState, { title: t('backendTitle'), description: t('backendHint') }),
+          jsx(Button, {
+            onClick: () => void configQuery.refetch(),
+            size: 'sm',
+            type: 'button',
+            variant: 'outline',
+            children: t('retry')
+          })
+        ]
+      })
     })
   }
 
   if (!configured) {
-    return jsxs('div', {
-      className: 'pd-empty-stack',
-      children: [
-        jsx(EmptyState, { title: t('unconfiguredTitle'), description: t('unconfiguredHint') }),
-        jsx(Button, {
-          onClick: () => void configQuery.refetch(),
-          size: 'sm',
-          type: 'button',
-          variant: 'outline',
-          children: t('retry')
-        })
-      ]
+    return jsx(StatusScreen, {
+      scope,
+      children: jsxs('div', {
+        className: 'pd-empty-stack',
+        children: [
+          jsx(EmptyState, { title: t('unconfiguredTitle'), description: t('unconfiguredHint') }),
+          jsx(Button, {
+            onClick: () => void configQuery.refetch(),
+            size: 'sm',
+            type: 'button',
+            variant: 'outline',
+            children: t('retry')
+          })
+        ]
+      })
+    })
+  }
+
+  if (!identityReady) {
+    return jsx(StatusScreen, {
+      scope,
+      children: jsxs('div', {
+        className: 'pd-center',
+        children: [jsx(GlyphSpinner, { ariaLabel: t('loading') }), t('loading')]
+      })
     })
   }
 
@@ -1198,6 +1379,7 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
     className: 'pd-apps capabilities-page',
     children: [
       jsx(AppsDirectory, {
+        key: externalUserId,
         accounts,
         accountsError,
         accountsPending: accountsQuery.isPending,
@@ -1212,7 +1394,9 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
         onOpen: setSelectedApp,
         onReconnect: account =>
           setConnectTarget(account?.app ?? { name_slug: appSlugOf(account), name: appNameOf(account?.app) }),
-        onRetryAccounts: () => void accountsQuery.refetch()
+        onRetryAccounts: () => void accountsQuery.refetch(),
+        scope,
+        scopeSelector: ScopeSelector
       }),
       selectedApp
         ? jsx(AppDetailsDialog, {
@@ -1233,15 +1417,16 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
             externalUserId,
             onClose: () => setConnectTarget(null),
             onConnected: connectedCallback,
-            openExternal
+            openExternal,
+            scope: apiScope
           })
         : null,
       addOpen && canAddCustomMcp
         ? jsx(AddCustomMcpDialog, {
-            gateway: host.getGateway(),
+            gateway: scopedGateway,
             onOpenChange: setAddOpen,
             open: true,
-            profile: activeProfile
+            profile: localMcpProfile
           })
         : null,
       jsx(ConfirmDialog, {
@@ -1251,7 +1436,7 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
         onClose: () => setDisconnectTarget(null),
         onConfirm: async () => {
           if (!disconnectTarget) return
-          await api.disconnect({ accountId: disconnectTarget.id, externalUserId })
+          await api.disconnect({ accountId: disconnectTarget.id, externalUserId, scope: apiScope })
           await refreshAccounts()
           toast.success(
             t('appDisconnected'),
@@ -1266,6 +1451,17 @@ export function PipedreamAppsTab({ api, fallbackExternalUserId, openExternal, co
       })
     ]
   })
+}
+
+const useCapabilityScope = sdk.useCapabilityScope
+
+/** Plugin-contributed tabs own their own profile scope (core withholds the
+ *  page's selector from them). Read the roster once here and hand the selected
+ *  scope to the tab; builds without the SDK export render it unscoped. */
+function ScopedPipedreamAppsPage(props) {
+  const scope = useCapabilityScope({})
+
+  return jsx(PipedreamAppsTab, { ...props, scope })
 }
 
 export default {
@@ -1291,26 +1487,24 @@ export default {
     showAppsForConnectors()
     ctx.addEventListener(window, 'hashchange', showAppsForConnectors)
 
-    const stored = ctx.storage.get('externalUserId', '')
-    const hasStored = typeof stored === 'string' && stored.length > 0
-    const fallbackExternalUserId = hasStored ? stored : randomUuid()
-    if (!hasStored) ctx.storage.set('externalUserId', fallbackExternalUserId)
-
     const api = createPipedreamApi(ctx.rest)
     const toast = {
       success: (title, message) => host.notify({ kind: 'success', message, title }),
       warning: (title, message) => host.notify({ kind: 'warning', message, title })
     }
+    const AppsPage =
+      typeof sdk.useCapabilityScope === 'function' && typeof sdk.CapabilityScopeSelector === 'function'
+        ? ScopedPipedreamAppsPage
+        : PipedreamAppsTab
 
     ctx.register({
       area: CAPABILITIES_TABS_AREA,
       id: 'apps',
       order: 100,
       render: () =>
-        jsx(PipedreamAppsTab, {
+        jsx(AppsPage, {
           api,
           copyText: text => ctx.os.writeClipboard(text),
-          fallbackExternalUserId,
           openExternal: url => ctx.os.openExternal(url),
           toast
         }),

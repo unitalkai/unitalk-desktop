@@ -1573,6 +1573,17 @@ export { ConnectorsTab } from '@/app/capabilities/connectors/connectors-tab'
  *  `excludePrefixes` drops servers the plugin already represents, and
  *  `onCountChange` reports the visible count. */
 export { LocalMcpServersPanel } from '@/app/capabilities/connectors/local-mcp-servers-panel'
+/** The Capabilities profile scope, for a plugin-contributed tab that owns its
+ *  own profile picker (core withholds the page's selector from plugin tabs).
+ *  `useCapabilityScope()` reads the roster and tracks the active profile;
+ *  `CapabilityScopeSelector` is the page's "Configuring:" control. Pair a
+ *  selected scope with `ctx.rest(path, { scope: scope.profile })` so the
+ *  plugin's own backend calls read/write that profile, not the active one. */
+export {
+  type CapabilityScope,
+  CapabilityScopeSelector,
+  useCapabilityScope
+} from '@/app/capabilities/scope-selector'
 // Every contribution surface, plugin-reachable: register keybinds, palette
 // commands, routes, themes, panes, composer extensions, and bar items with
 // the same area ids + payload types core uses.

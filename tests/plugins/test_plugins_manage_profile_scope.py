@@ -7,7 +7,22 @@ handler resolves ``get_profile_dir(profile)`` and wraps the action dispatch in
 scan THAT profile's ``plugins/`` dir, not the launch profile's.
 """
 
+import hermes_yaml as yaml
+
 from tui_gateway import server
+
+
+def _write_profile_config(home, plugins):
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "config.yaml").write_text(
+        yaml.safe_dump({"_config_version": 54, "plugins": plugins}, sort_keys=False),
+        encoding="utf-8",
+    )
+
+
+def _plugins_of(home):
+    data = yaml.safe_load((home / "config.yaml").read_text(encoding="utf-8")) or {}
+    return data.get("plugins") or {}
 
 
 def test_plugins_manage_profile_reads_that_profiles_dir(tmp_path, monkeypatch):
@@ -72,3 +87,52 @@ def test_plugins_manage_unscoped_still_lists(monkeypatch):
 
     assert "result" in resp, resp
     assert "plugins" in resp["result"]
+
+
+def test_dashboard_only_plugin_enable_is_per_profile(tmp_path, monkeypatch):
+    """A dashboard-only user plugin (no agent manifest) is enabled through the same
+    ``plugins.enabled`` gate, but only in the requested profile's config."""
+    home_a = tmp_path / "profiles" / "botA"
+    home_b = tmp_path / "profiles" / "botB"
+    _write_profile_config(home_a, {"enabled": [], "disabled": []})
+    _write_profile_config(home_b, {"enabled": [], "disabled": []})
+    before_b = (home_b / "config.yaml").read_bytes()
+
+    from hermes_cli import profiles
+    from hermes_cli import web_server_dashboard as wsd
+
+    monkeypatch.setattr(
+        profiles, "get_profile_dir", lambda name: {"botA": home_a, "botB": home_b}[name]
+    )
+    # Discovery of the root-installed dashboard half (no plugin.yaml to resolve).
+    monkeypatch.setattr(
+        wsd,
+        "_discover_dashboard_plugins",
+        lambda: [{"name": "pipedream-apps", "source": "user"}],
+    )
+
+    def toggle(enable, request_id):
+        return server.handle_request(
+            {
+                "id": request_id,
+                "method": "plugins.manage",
+                "params": {
+                    "action": "toggle",
+                    "key": "pipedream-apps",
+                    "enable": enable,
+                    "profile": "botA",
+                },
+            }
+        )
+
+    enabled = toggle(True, "1")
+    assert "result" in enabled, enabled
+    assert enabled["result"]["ok"] is True
+    assert _plugins_of(home_a) == {"enabled": ["pipedream-apps"], "disabled": []}
+    assert (home_b / "config.yaml").read_bytes() == before_b
+
+    disabled = toggle(False, "2")
+    assert "result" in disabled, disabled
+    assert disabled["result"]["ok"] is True
+    assert _plugins_of(home_a) == {"enabled": [], "disabled": ["pipedream-apps"]}
+    assert (home_b / "config.yaml").read_bytes() == before_b

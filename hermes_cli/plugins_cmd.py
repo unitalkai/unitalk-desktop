@@ -1022,14 +1022,99 @@ def _toggle_plugin_toolset(name: str, *, enable: bool, toolset_key: Optional[str
         save_config(config)
 
 
+def _resolve_dashboard_only_plugin(name: str) -> Optional[tuple[str, str]]:
+    """``(name, source)`` of a discovered dashboard-only plugin, or ``None``.
+
+    A dashboard-only plugin (a ``dashboard/`` half with no agent manifest) never resolves through
+    :func:`_resolve_plugin_key`, yet its consent lives in the same ``plugins.enabled`` /
+    ``plugins.disabled`` lists the dashboard request gate reads. Dashboard discovery resolves user
+    plugins from the process launch home, so a root-installed plugin is found for every profile
+    without copying it into the profile's own ``plugins/`` directory.
+    """
+    try:
+        from hermes_cli.web_server_dashboard import _discover_dashboard_plugins
+
+        entry = next((p for p in _discover_dashboard_plugins() if p.get("name") == name), None)
+    except Exception:  # health: allow BLE001 -- discovery must never break a config toggle
+        return None
+    source = str((entry or {}).get("source") or "")
+    return (name, source) if entry is not None and source in ("user", "bundled") else None
+
+
+def _rescan_dashboard_plugins_for_scope() -> None:
+    """Refresh the active profile's dashboard-plugin caches when a web server owns them."""
+    import sys
+
+    if "hermes_cli.web_server" not in sys.modules:
+        return  # a CLI toggle only needs the config write; there is no dashboard cache here
+    try:
+        from hermes_cli.web_server import _get_dashboard_plugins
+        from hermes_cli.web_server_dashboard import _invalidate_plugins_hub_cache
+
+        _get_dashboard_plugins(force_rescan=True)
+        _invalidate_plugins_hub_cache()
+    except Exception:  # health: allow BLE001 -- the config write already landed
+        pass
+
+
+def _set_dashboard_only_plugin_enabled(name: str, source: str, *, enabled: bool) -> dict[str, Any]:
+    """Persist a dashboard-only plugin's consent in THIS profile's config only.
+
+    ``plugins.enabled`` / ``plugins.disabled`` are the consent gate for user dashboard plugins too,
+    but there is no agent manifest to resolve or load. Bundled dashboard plugins are default-on and
+    only honour the deny-list. The caller's profile scope decides which ``config.yaml`` is written;
+    no other profile is touched.
+    """
+    from hermes_cli.config import load_config, save_config
+
+    config = load_config()
+    plugins = config.get("plugins")
+    if not isinstance(plugins, dict):
+        plugins = {}
+        config["plugins"] = plugins
+    enabled_list = [n for n in (plugins.get("enabled") or []) if isinstance(n, str)]
+    disabled_list = [n for n in (plugins.get("disabled") or []) if isinstance(n, str)]
+
+    if enabled and source == "user":
+        changed = name not in enabled_list or name in disabled_list
+        if name not in enabled_list:
+            enabled_list.append(name)
+        if name in disabled_list:
+            disabled_list.remove(name)
+    elif enabled:
+        changed = name in disabled_list
+        if name in disabled_list:
+            disabled_list.remove(name)
+    else:
+        changed = name not in disabled_list or name in enabled_list
+        if name not in disabled_list:
+            disabled_list.append(name)
+        if name in enabled_list:
+            enabled_list.remove(name)
+
+    if changed:
+        plugins["enabled"] = sorted(set(enabled_list))
+        plugins["disabled"] = sorted(set(disabled_list))
+        save_config(config)
+        _rescan_dashboard_plugins_for_scope()
+    return {"ok": True, "name": name, "unchanged": not changed, "restart_required": False}
+
+
 def dashboard_set_agent_plugin_enabled(name: str, *, enabled: bool) -> dict[str, Any]:
     """Enable or disable a plugin in ``config.yaml`` (runtime allow/deny lists). *name* may be the
     canonical key, the manifest name or a unique bare leaf; the canonical key is what gets written
     (the loader never matches a bare leaf, and a stale key in ``disabled`` outranks a manifest-name
-    entry in ``enabled`` — so writing the raw identifier reported success while the plugin stayed off)."""
+    entry in ``enabled`` — so writing the raw identifier reported success while the plugin stayed off).
+
+    A dashboard-only user plugin (e.g. ``pipedream-apps``) has no agent manifest: it resolves through
+    dashboard discovery and is enabled through the same allow-list, per profile.
+    """
     key = _resolve_plugin_key(name)
     if key is None:
-        return {"ok": False, "error": f"Plugin '{name}' is not installed or bundled."}
+        dashboard_only = _resolve_dashboard_only_plugin(name)
+        if dashboard_only is None:
+            return {"ok": False, "error": f"Plugin '{name}' is not installed or bundled."}
+        return _set_dashboard_only_plugin_enabled(dashboard_only[0], dashboard_only[1], enabled=enabled)
     from hermes_cli.plugins_admission import AdmissionRefused
 
     toolset_key = None if enabled else _saved_list_toolset_key(key)

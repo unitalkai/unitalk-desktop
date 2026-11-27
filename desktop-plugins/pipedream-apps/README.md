@@ -6,12 +6,35 @@ links open it instead. It is a runtime plugin — copy the folder, no app rebuil
 for the plugin itself:
 
 ```powershell
-Copy-Item -Recurse desktop-plugins\pipedream-apps $HOME\.hermes\desktop-plugins\pipedream-apps
+Copy-Item -Recurse desktop-plugins\pipedream-apps "$env:LOCALAPPDATA\hermes\desktop-plugins\pipedream-apps"
 ```
 
+On Linux/macOS the Hermes home is `~/.hermes` unless `HERMES_HOME` overrides it.
+
 The tab needs the Desktop core build that includes the `capabilities.tabs`
-contribution area, and the `pipedream-apps` Python backend
-(`plugins/pipedream-apps/dashboard/`) mounted by the gateway.
+contribution area, and the `pipedream-apps` Python backend installed **once** in
+the Hermes root (`<HERMES_HOME>/plugins/pipedream-apps`) and enabled per profile.
+
+## Enabling the backend per profile
+
+The backend is a user-source dashboard plugin. It is discovered from the Hermes
+root for every profile, so it never needs copying into a profile's own
+`plugins/` directory. Consent is per profile, however: a freshly created profile
+has no `plugins.enabled` entry yet, and its requests are refused until it does.
+
+When the selected profile's backend is not enabled, the tab shows **Enable for
+this profile**. That action calls `plugins.manage toggle` on the selected
+profile's backend and writes only that profile's `config.yaml`
+(`plugins.enabled`). No other profile's config, connections or MCP entries change.
+
+Manual equivalent:
+
+```yaml
+# <HERMES_HOME>/profiles/<profile>/config.yaml
+plugins:
+  enabled:
+    - pipedream-apps
+```
 
 ## Configuration
 
@@ -36,12 +59,21 @@ enables MCP server configuration after a successful connect.
   tools/logs/mcp.json, remove). The Pipedream-managed `pipedream_<slug>` entries
   are omitted so each app appears only once. Builds without the SDK's
   `LocalMcpServersPanel` export hide the section.
-- Uses the Clerk user id as `external_user_id` (persisted UUID fallback when Clerk is
-  unavailable).
+- Scopes every Pipedream external user by the signed-in principal and the Hermes
+  profile: `userId@orgId#profileName`. Connections and MCP entries made in one
+  profile (or Clerk organization) never appear in another; there is no anonymous
+  fallback.
+- Shows the Capabilities profile selector at the top right of the tab so another
+  profile's connectors can be viewed and managed without changing the app's
+  active profile. The selected scope rides on every connect/accounts/disconnect/
+  MCP-enable call. Builds without the SDK's `useCapabilityScope` /
+  `CapabilityScopeSelector` exports hide the selector; connections still follow
+  the active profile.
 - After a connect, calls the plugin backend (`POST /mcp/enable`), which configures
-  `pipedream_<slug>` through the Dashboard MCP API when an MCP proxy base is configured.
-  Disconnecting the last account for an app disables the entry instead of deleting it.
-  There is no live reload; tools become available in a new chat/session.
+  `pipedream_<slug>` through the Dashboard MCP API **in the selected profile's
+  config**, with the profile-scoped external-user URL. Disconnecting the last
+  account for an app disables the entry instead of deleting it. There is no live
+  reload; tools become available in a new chat/session.
 - Replaces the built-in Capabilities Connectors tab: the row always shows Skills,
   Plugins, Connectors, Tools, and `?tab=connectors` links open this catalog.
 
