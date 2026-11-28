@@ -4,6 +4,7 @@ import { billingNavChildren, UNITALK_PRICING_URL } from './billing-nav'
 
 const copy = {
   aiUsage: 'AI usage',
+  buyCredits: 'Buy credits',
   mySubscription: 'My subscription',
   plans: 'Plans'
 }
@@ -14,6 +15,7 @@ function build(overrides: Partial<Parameters<typeof billingNavChildren>[0]> = {}
     copy,
     isBillingActive: true,
     onOpenAiUsage: vi.fn(),
+    onOpenBuyCredits: vi.fn(),
     onOpenPlans: vi.fn(),
     onOpenSubscription: vi.fn(),
     ...overrides
@@ -21,10 +23,10 @@ function build(overrides: Partial<Parameters<typeof billingNavChildren>[0]> = {}
 }
 
 describe('billingNavChildren', () => {
-  it('lists AI usage, My subscription and Plans, with Overview hidden', () => {
+  it('lists AI usage, Buy credits, My subscription and Plans, with Overview hidden', () => {
     const labels = build().map(link => link.label)
 
-    expect(labels).toEqual(['AI usage', 'My subscription', 'Plans'])
+    expect(labels).toEqual(['AI usage', 'Buy credits', 'My subscription', 'Plans'])
     expect(labels).not.toContain('Overview')
   })
 
@@ -42,10 +44,18 @@ describe('billingNavChildren', () => {
     expect(onOpenAiUsage).toHaveBeenCalledTimes(1)
   })
 
+  it('opens the buy-credits popup from Buy credits', () => {
+    const onOpenBuyCredits = vi.fn()
+
+    build({ onOpenBuyCredits })[1].onSelect()
+
+    expect(onOpenBuyCredits).toHaveBeenCalledTimes(1)
+  })
+
   it('opens the subscription portal from My subscription', () => {
     const onOpenSubscription = vi.fn()
 
-    build({ onOpenSubscription })[1].onSelect()
+    build({ onOpenSubscription })[2].onSelect()
 
     expect(onOpenSubscription).toHaveBeenCalledTimes(1)
   })
@@ -53,7 +63,7 @@ describe('billingNavChildren', () => {
   it('opens the external pricing page from Plans', () => {
     const onOpenPlans = vi.fn()
 
-    build({ onOpenPlans })[2].onSelect()
+    build({ onOpenPlans })[3].onSelect()
 
     expect(onOpenPlans).toHaveBeenCalledTimes(1)
     expect(UNITALK_PRICING_URL).toBe('https://unitalk.ai/home/tarifs')

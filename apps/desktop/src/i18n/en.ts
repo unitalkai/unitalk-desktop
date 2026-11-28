@@ -738,6 +738,7 @@ export const en: Translations = {
       billingOverview: 'Overview',
       billingPlans: 'Plans',
       billingAiUsage: 'AI usage',
+      billingBuyCredits: 'Buy credits',
       billingMySubscription: 'My subscription'
     },
     closeSettings: 'Close settings',

@@ -456,6 +456,7 @@ export const ruOverrides = {
       billingOverview: 'Обзор',
       billingPlans: 'Тарифы',
       billingAiUsage: 'Использование ИИ',
+      billingBuyCredits: 'Купить кредиты',
       billingMySubscription: 'Моя подписка'
     },
     closeSettings: 'Закрыть настройки',

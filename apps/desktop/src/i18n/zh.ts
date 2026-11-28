@@ -513,6 +513,7 @@ export const zhOverrides = {
       billingOverview: '概览',
       billingPlans: '套餐',
       billingAiUsage: 'AI 用量',
+      billingBuyCredits: '购买额度',
       billingMySubscription: '我的订阅'
     },
     closeSettings: '关闭设置',

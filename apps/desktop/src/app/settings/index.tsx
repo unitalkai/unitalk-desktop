@@ -1,7 +1,8 @@
 import { useStore } from '@nanostores/react'
-import { type ComponentType, useCallback, useEffect, useMemo, useRef } from 'react'
+import { type ComponentType, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
+import { BuyCreditsDialog } from '@/components/billing/buy-credits-dialog'
 import { codiconIcon } from '@/components/ui/codicon'
 import { KbdCombo } from '@/components/ui/kbd'
 import { Tip } from '@/components/ui/tooltip'
@@ -174,6 +175,7 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
   const [keysView] = useRouteEnumParam<KeysView>('kview', KEYS_VIEWS, 'tools')
   const [billingView] = useRouteEnumParam<BillingSubView>('bview', BILLING_VIEWS, 'overview')
   const { openPortal: openBillingPortal } = useBillingPortal(activeView === 'billing')
+  const [buyCreditsOpen, setBuyCreditsOpen] = useState(false)
 
   // Jump to a section + its sub-view in one navigate. Two sequential setters
   // would each read the same stale `search` and the second would clobber the
@@ -308,11 +310,13 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
               billingView,
               copy: {
                 aiUsage: t.settings.subpages.billingAiUsage,
+                buyCredits: t.settings.subpages.billingBuyCredits,
                 mySubscription: t.settings.subpages.billingMySubscription,
                 plans: t.settings.subpages.billingPlans
               },
               isBillingActive: activeView === 'billing',
               onOpenAiUsage: () => openSubView('billing', 'bview', 'spending', 'overview'),
+              onOpenBuyCredits: () => setBuyCreditsOpen(true),
               onOpenPlans: () => openExternal(UNITALK_PRICING_URL),
               onOpenSubscription: openBillingPortal
             }),
@@ -621,6 +625,7 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
           </SettingsBreadcrumbContext.Provider>
         </OverlayMain>
       </OverlaySplitLayout>
+      <BuyCreditsDialog onOpenChange={setBuyCreditsOpen} onOpenUrl={openExternal} open={buyCreditsOpen} />
     </OverlayView>
   )
 }

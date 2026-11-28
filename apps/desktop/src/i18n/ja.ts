@@ -394,6 +394,7 @@ export const jaOverrides = {
       billingOverview: '概要',
       billingPlans: 'プラン',
       billingAiUsage: 'AI利用状況',
+      billingBuyCredits: 'クレジットを購入',
       billingMySubscription: 'マイサブスクリプション'
     },
     plugins: jaPluginSettings.plugins,

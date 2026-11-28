@@ -1,5 +1,6 @@
 import {
   Button,
+  BuyCreditsDialog,
   cn,
   Codicon,
   Dialog,
@@ -36,16 +37,6 @@ const LINK_URLS = {
   pricing: 'https://unitalk.ai/home/tarifs'
 }
 
-const CHECKOUT_URL = 'https://unitalk.ai/api/checkout/credits'
-const CREDITS_DETAILS_URL = 'https://unitalk.ai/credits'
-const CREDITS_PER_EURO = 500
-const MAX_CUSTOM_AMOUNT = 9000
-const MIN_CUSTOM_AMOUNT = 5
-const PRESET_AMOUNTS = [5, 10, 25, 50, 100, 250]
-
-const CREDITS_FORMAT = new Intl.NumberFormat('de-DE')
-const EURO_FORMAT = new Intl.NumberFormat('de-DE', { currency: 'EUR', style: 'currency' })
-
 // Hermes Web owns the LiteLLM gateway key, so the Desktop asks it for the
 // active team's remaining credits instead of calling the gateway directly.
 const TEAM_CREDITS_URL = 'https://agent.unitalk.ai/api/team'
@@ -53,19 +44,6 @@ const TEAM_CREDITS_REFRESH_MS = 60_000
 const TEAM_CREDITS_FORMAT = new Intl.NumberFormat('fr-FR')
 const teamCreditsCache = new Map()
 const teamCreditsInflight = new Map()
-
-const formatCredits = amount => CREDITS_FORMAT.format(amount * CREDITS_PER_EURO)
-const formatEuro = amount => EURO_FORMAT.format(amount)
-
-const clampAmount = value => {
-  const parsed = Number(value)
-
-  if (!Number.isFinite(parsed)) {
-    return MIN_CUSTOM_AMOUNT
-  }
-
-  return Math.min(MAX_CUSTOM_AMOUNT, Math.max(MIN_CUSTOM_AMOUNT, parsed))
-}
 
 const ICON = 'shrink-0 text-(--ui-text-secondary)'
 
@@ -348,142 +326,6 @@ function CreateOrganizationDialog({ onOpenChange, open }) {
           })
         ]
       })
-    })
-  })
-}
-
-function BuyCreditsDialog({ onOpenChange, onOpenUrl, open }) {
-  const [amount, setAmount] = useState(PRESET_AMOUNTS[0])
-  const [custom, setCustom] = useState(false)
-  const [draft, setDraft] = useState(String(PRESET_AMOUNTS[0]))
-
-  useEffect(() => {
-    if (open) {
-      return
-    }
-
-    setAmount(PRESET_AMOUNTS[0])
-    setCustom(false)
-    setDraft(String(PRESET_AMOUNTS[0]))
-  }, [open])
-
-  const effectiveAmount = custom ? clampAmount(draft) : amount
-
-  const choosePreset = value => {
-    setAmount(value)
-    setCustom(false)
-  }
-
-  const startCustom = () => {
-    setDraft(String(amount))
-    setCustom(true)
-  }
-
-  const blurCustom = () => {
-    const next = clampAmount(draft)
-
-    setAmount(next)
-    setDraft(String(next))
-  }
-
-  const buy = () => {
-    const refCode =
-      typeof window.promotekit_referral === 'string' ? `&refCode=${encodeURIComponent(window.promotekit_referral)}` : ''
-
-    onOpenUrl(`${CHECKOUT_URL}?amount=${encodeURIComponent(effectiveAmount)}${refCode}`)
-    onOpenChange(false)
-  }
-
-  return jsx(Dialog, {
-    onOpenChange,
-    open,
-    children: jsxs(DialogContent, {
-      children: [
-        jsxs(DialogHeader, {
-          className: 'items-center',
-          children: [
-            jsx('div', {
-              className: 'mb-1 grid size-16 place-items-center rounded-full bg-primary text-primary-foreground',
-              children: jsx(Codicon, { name: 'zap', size: '2rem' })
-            }),
-            jsx(DialogTitle, {
-              className: 'w-full text-center',
-              children: 'Buy AI credits'
-            }),
-            jsxs(DialogDescription, {
-              className: 'text-center',
-              children: [
-                'Credits are the currency you use to chat, search the web, talk with your apps or generate images and video with any model in Unitalk ',
-                jsx('button', {
-                  className: 'cursor-pointer text-(--ui-blue) hover:underline',
-                  onClick: () => onOpenUrl(CREDITS_DETAILS_URL),
-                  type: 'button',
-                  children: 'View details'
-                })
-              ]
-            })
-          ]
-        }),
-        jsx('div', {
-          className: 'my-2 text-center text-3xl font-semibold text-primary',
-          children: formatEuro(effectiveAmount)
-        }),
-        jsx('div', {
-          className: 'grid grid-cols-3 gap-2',
-          children: PRESET_AMOUNTS.map(value =>
-            jsx(
-              Button,
-              {
-                className: cn(
-                  'h-auto w-full flex-col gap-1 py-3',
-                  !custom &&
-                    amount === value &&
-                    'bg-(--ui-bg-quaternary) text-(--ui-text-primary) shadow-[inset_0_0_0_1.5px_var(--ui-purple)]'
-                ),
-                onClick: () => choosePreset(value),
-                type: 'button',
-                variant: 'outline',
-                children: [
-                  jsx('span', { className: 'text-base font-semibold', children: formatEuro(value) }),
-                  jsx('span', {
-                    className: 'text-[0.6875rem] text-primary',
-                    children: `${formatCredits(value)} AI credits`
-                  })
-                ]
-              },
-              value
-            )
-          )
-        }),
-        custom
-          ? jsx(Input, {
-              'aria-label': 'Custom credit amount',
-              autoFocus: true,
-              className: 'w-full',
-              max: MAX_CUSTOM_AMOUNT,
-              min: MIN_CUSTOM_AMOUNT,
-              onBlur: blurCustom,
-              onChange: event => setDraft(event.target.value),
-              placeholder: 'Enter an amount (5 – 9,000)',
-              type: 'number',
-              value: draft
-            })
-          : jsx(Button, {
-              className: 'w-full',
-              onClick: startCustom,
-              type: 'button',
-              variant: 'outline',
-              children: 'Custom'
-            }),
-        jsx(DialogFooter, {
-          children: jsx(Button, {
-            className: 'w-full',
-            onClick: buy,
-            type: 'button',
-            children: 'Buy credits'
-          })
-        })
-      ]
     })
   })
 }

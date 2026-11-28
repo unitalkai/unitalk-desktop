@@ -1708,6 +1708,11 @@ export type { TitlebarTool } from '@/app/shell/titlebar-controls'
  * `MEDIA:` delivery directives) and the same rich Markdown/media components as
  * core chat. Prefer this over raw Streamdown for transcript-style messages. */
 export { MessageTextContent } from '@/components/assistant-ui/markdown-text'
+/** The Unitalk "Buy AI credits" checkout popup — the exact dialog the titlebar
+ *  user panel opens. Mount it with `open`/`onOpenChange` and pass the host's
+ *  external opener as `onOpenUrl` (Settings passes `openExternal`; a plugin
+ *  passes `ctx.os.openExternal`). */
+export { BuyCreditsDialog } from '@/components/billing/buy-credits-dialog'
 export { composerInputBacking, composerSurfaceRing } from '@/components/chat/composer-dock'
 /** The oversized Collapse lettering an empty chat is titled with — core writes
  *  "Unitalk" with it, a `chat.empty` contribution writes its own name. */

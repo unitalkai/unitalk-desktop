@@ -744,6 +744,7 @@ export const frOverrides = {
       billingOverview: "Vue d'ensemble",
       billingPlans: 'Forfaits',
       billingAiUsage: "Utilisation de l'IA",
+      billingBuyCredits: 'Acheter des crédits',
       billingMySubscription: 'Mon abonnement'
     },
     closeSettings: 'Fermer les paramètres',

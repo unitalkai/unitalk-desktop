@@ -69,6 +69,7 @@ export const zhHantSettings = {
       billingOverview: '概覽',
       billingPlans: '方案',
       billingAiUsage: 'AI 用量',
+      billingBuyCredits: '購買額度',
       billingMySubscription: '我的訂閱'
     },
     plugins: {

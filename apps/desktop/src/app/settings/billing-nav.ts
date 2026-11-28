@@ -1,4 +1,4 @@
-import { BarChart3, CreditCard, ExternalLink } from '@/lib/icons'
+import { BarChart3, CreditCard, ExternalLink, Zap } from '@/lib/icons'
 
 import type { OverlayNavLink } from '../overlays/overlay-split-layout'
 
@@ -9,6 +9,7 @@ export const UNITALK_PRICING_URL = 'https://unitalk.ai/home/tarifs'
 
 interface BillingNavCopy {
   aiUsage: string
+  buyCredits: string
   mySubscription: string
   plans: string
 }
@@ -18,20 +19,23 @@ interface BillingNavChildrenOptions {
   copy: BillingNavCopy
   isBillingActive: boolean
   onOpenAiUsage: () => void
+  onOpenBuyCredits: () => void
   onOpenPlans: () => void
   onOpenSubscription: () => void
 }
 
 /**
- * Billing submenu: AI usage (opens the spend page), My subscription (opens the
- * Stripe customer portal), Plans (opens the external pricing page). Overview is
- * hidden.
+ * Billing submenu: AI usage (opens the spend page), Buy credits (opens the
+ * Unitalk checkout popup — the same dialog the titlebar user panel uses),
+ * My subscription (opens the Stripe customer portal), Plans (opens the
+ * external pricing page). Overview is hidden.
  */
 export function billingNavChildren({
   billingView,
   copy,
   isBillingActive,
   onOpenAiUsage,
+  onOpenBuyCredits,
   onOpenPlans,
   onOpenSubscription
 }: BillingNavChildrenOptions): OverlayNavLink[] {
@@ -42,6 +46,13 @@ export function billingNavChildren({
       id: 'bview:spending',
       label: copy.aiUsage,
       onSelect: onOpenAiUsage
+    },
+    {
+      active: false,
+      icon: Zap,
+      id: 'billing:buy-credits',
+      label: copy.buyCredits,
+      onSelect: onOpenBuyCredits
     },
     {
       active: false,

@@ -124,6 +124,7 @@ export const arSettings = {
       billingOverview: 'نظرة عامة',
       billingPlans: 'الخطط',
       billingAiUsage: 'استخدام الذكاء الاصطناعي',
+      billingBuyCredits: 'شراء الأرصدة',
       billingMySubscription: 'اشتراكي'
     },
     closeSettings: 'إغلاق الإعدادات',

@@ -744,6 +744,7 @@ export const deOverrides = {
       billingOverview: 'Übersicht',
       billingPlans: 'Tarife',
       billingAiUsage: 'KI-Nutzung',
+      billingBuyCredits: 'Credits kaufen',
       billingMySubscription: 'Mein Abonnement'
     },
     closeSettings: 'Einstellungen schließen',

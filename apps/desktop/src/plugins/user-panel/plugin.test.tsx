@@ -49,6 +49,7 @@ vi.mock('@hermes/plugin-sdk', async importOriginal => {
 
 const user = {
   email: null,
+  emailVerified: true,
   fullName: 'Ada Lovelace',
   id: 'user_1',
   imageUrl: null,

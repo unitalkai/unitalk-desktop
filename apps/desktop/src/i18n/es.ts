@@ -747,6 +747,7 @@ export const esOverrides = {
       billingOverview: 'Resumen',
       billingPlans: 'Planes',
       billingAiUsage: 'Uso de IA',
+      billingBuyCredits: 'Comprar créditos',
       billingMySubscription: 'Mi suscripción'
     },
     closeSettings: 'Cerrar configuración',
